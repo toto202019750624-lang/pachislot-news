@@ -8,18 +8,19 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Supabaseクライアント
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ニュース一覧を取得
+// ニュース一覧を取得（ページネーション対応）
 export const getNews = async (
   category?: string,
   source?: string,
-  limit: number = 50
-): Promise<NewsItem[]> => {
+  limit: number = 50,
+  offset: number = 0
+): Promise<{ data: NewsItem[]; hasMore: boolean }> => {
   try {
     let query = supabase
       .from('news')
-      .select('*')
+      .select('*', { count: 'exact' })
       .order('fetched_at', { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
 
     if (category && category !== 'all') {
       query = query.eq('category', category);
@@ -29,39 +30,45 @@ export const getNews = async (
       query = query.eq('source', source);
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
 
     if (error) {
       console.error('ニュース取得エラー:', error.message);
-      return [];
+      return { data: [], hasMore: false };
     }
 
-    return data || [];
+    const hasMore = count ? offset + limit < count : false;
+    return { data: data || [], hasMore };
   } catch (error) {
     console.error('ニュース取得エラー:', error);
-    return [];
+    return { data: [], hasMore: false };
   }
 };
 
-// ニュースを検索
-export const searchNews = async (keyword: string): Promise<NewsItem[]> => {
+// ニュースを検索（ページネーション対応）
+export const searchNews = async (
+  keyword: string,
+  limit: number = 50,
+  offset: number = 0
+): Promise<{ data: NewsItem[]; hasMore: boolean }> => {
   try {
-    const { data, error } = await supabase
+    const { data, error, count } = await supabase
       .from('news')
-      .select('*')
+      .select('*', { count: 'exact' })
       .ilike('title', `%${keyword}%`)
       .order('fetched_at', { ascending: false })
-      .limit(50);
+      .range(offset, offset + limit - 1);
 
     if (error) {
       console.error('ニュース検索エラー:', error.message);
-      return [];
+      return { data: [], hasMore: false };
     }
 
-    return data || [];
+    const hasMore = count ? offset + limit < count : false;
+    return { data: data || [], hasMore };
   } catch (error) {
     console.error('ニュース検索エラー:', error);
-    return [];
+    return { data: [], hasMore: false };
   }
 };
 

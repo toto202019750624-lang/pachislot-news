@@ -7,8 +7,18 @@ interface NewsCardProps {
   isTopNews?: boolean;
 }
 
+// カテゴリ別のアイコンと色
+const CATEGORY_STYLES: { [key: string]: { icon: string; bgColor: string } } = {
+  new_machine: { icon: '🎰', bgColor: '#e74c3c' },
+  regulation: { icon: '📋', bgColor: '#27ae60' },
+  hall: { icon: '🏪', bgColor: '#f39c12' },
+  maker: { icon: '🏭', bgColor: '#9b59b6' },
+  industry: { icon: '🏢', bgColor: '#3498db' },
+};
+
 export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) => {
   const sourceInfo = NEWS_SOURCES.find(s => s.id === item.source);
+  const categoryStyle = CATEGORY_STYLES[item.category] || CATEGORY_STYLES.industry;
   
   const handlePress = () => {
     Linking.openURL(item.url);
@@ -35,8 +45,16 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
         onPress={handlePress}
         activeOpacity={0.7}
       >
-        <View style={styles.topImagePlaceholder}>
-          <Text style={styles.topImageIcon}>🎰</Text>
+        <View style={[styles.topImagePlaceholder, { backgroundColor: categoryStyle.bgColor }]}>
+          <Text style={styles.topImageIcon}>{categoryStyle.icon}</Text>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryBadgeText}>
+              {item.category === 'new_machine' ? '新台' : 
+               item.category === 'regulation' ? '規制' :
+               item.category === 'hall' ? 'ホール' :
+               item.category === 'maker' ? 'メーカー' : '業界'}
+            </Text>
+          </View>
         </View>
         <View style={styles.topContent}>
           <Text style={styles.topTitle} numberOfLines={2}>{item.title}</Text>
@@ -64,8 +82,8 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
           <Text style={styles.date}>{formatDate(item.fetched_at)}</Text>
         </View>
       </View>
-      <View style={styles.thumbnail}>
-        <Text style={styles.thumbnailIcon}>📰</Text>
+      <View style={[styles.thumbnail, { backgroundColor: categoryStyle.bgColor }]}>
+        <Text style={styles.thumbnailIcon}>{categoryStyle.icon}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -108,9 +126,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a2e',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
   },
   topImageIcon: {
     fontSize: 60,
+  },
+  categoryBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  categoryBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   topContent: {
     padding: 12,

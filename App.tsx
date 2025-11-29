@@ -3,91 +3,180 @@ import {
   StyleSheet,
   View,
   Text,
-  ScrollView,
+  FlatList,
   RefreshControl,
   StatusBar,
   Platform,
   ActivityIndicator,
   TouchableOpacity,
-  Linking,
 } from 'react-native';
-import { NewsCard, CategoryTabs, SearchBar, TopicsSection } from './src/components';
+import { NewsCard, CategoryTabs, SearchBar } from './src/components';
 import { getNews, searchNews } from './src/services/supabase';
 import { NewsItem, CategoryId } from './src/types/news';
+
+const PAGE_SIZE = 30;
 
 export default function App() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>('all');
   const [isSearching, setIsSearching] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [totalCount, setTotalCount] = useState(0);
 
   // ニュースを取得
-  const fetchNews = useCallback(async (category?: CategoryId) => {
+  const fetchNews = useCallback(async (category?: CategoryId, reset: boolean = true) => {
     try {
-      const data = await getNews(category);
-      setNews(data);
+      const offset = reset ? 0 : news.length;
+      const result = await getNews(category, undefined, PAGE_SIZE, offset);
+      
+      if (reset) {
+        setNews(result.data);
+      } else {
+        setNews(prev => [...prev, ...result.data]);
+      }
+      setHasMore(result.hasMore);
+      setTotalCount(prev => reset ? result.data.length : prev + result.data.length);
     } catch (error) {
       console.error('ニュース取得エラー:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
     }
-  }, []);
+  }, [news.length]);
 
   // 初回読み込み
   useEffect(() => {
     fetchNews();
-  }, [fetchNews]);
+  }, []);
 
   // カテゴリ変更時
   const handleCategoryChange = (category: CategoryId) => {
     setSelectedCategory(category);
     setLoading(true);
     setIsSearching(false);
-    fetchNews(category);
+    setSearchKeyword('');
+    setNews([]);
+    fetchNews(category, true);
   };
 
   // プルダウン更新
   const handleRefresh = () => {
     setRefreshing(true);
-    fetchNews(selectedCategory);
+    if (isSearching && searchKeyword) {
+      handleSearch(searchKeyword, true);
+    } else {
+      fetchNews(selectedCategory, true);
+    }
+  };
+
+  // 追加読み込み
+  const handleLoadMore = () => {
+    if (loadingMore || !hasMore) return;
+    
+    setLoadingMore(true);
+    if (isSearching && searchKeyword) {
+      handleSearch(searchKeyword, false);
+    } else {
+      fetchNews(selectedCategory, false);
+    }
   };
 
   // 検索
-  const handleSearch = async (keyword: string) => {
-    setLoading(true);
+  const handleSearch = async (keyword: string, reset: boolean = true) => {
+    if (!keyword.trim()) return;
+    
+    if (reset) {
+      setLoading(true);
+      setNews([]);
+    }
     setIsSearching(true);
+    setSearchKeyword(keyword);
+    
     try {
-      const data = await searchNews(keyword);
-      setNews(data);
+      const offset = reset ? 0 : news.length;
+      const result = await searchNews(keyword, PAGE_SIZE, offset);
+      
+      if (reset) {
+        setNews(result.data);
+      } else {
+        setNews(prev => [...prev, ...result.data]);
+      }
+      setHasMore(result.hasMore);
     } catch (error) {
       console.error('検索エラー:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   // 検索クリア
   const handleClearSearch = () => {
     setIsSearching(false);
-    fetchNews(selectedCategory);
+    setSearchKeyword('');
+    setNews([]);
+    setLoading(true);
+    fetchNews(selectedCategory, true);
   };
-
-  // カテゴリ別にニュースを分類
-  const newMachineNews = news.filter(n => n.category === 'new_machine');
-  const industryNews = news.filter(n => n.category === 'industry');
-  const regulationNews = news.filter(n => n.category === 'regulation');
-  const makerNews = news.filter(n => n.category === 'maker');
-
-  // トップニュース（最新1件）
-  const topNews = news[0];
-  // その他のニュース
-  const otherNews = news.slice(1, 6);
 
   // 現在時刻
   const now = new Date();
   const timeString = `${now.getMonth() + 1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  // ヘッダーコンポーネント
+  const ListHeader = () => (
+    <View style={styles.listHeader}>
+      <View style={styles.statsBar}>
+        <Text style={styles.statsText}>
+          {isSearching ? `「${searchKeyword}」の検索結果` : '最新ニュース'}
+        </Text>
+        <Text style={styles.statsCount}>{news.length}件表示</Text>
+      </View>
+    </View>
+  );
+
+  // フッターコンポーネント（ローディング表示）
+  const ListFooter = () => {
+    if (!hasMore) {
+      return (
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>すべてのニュースを表示しました</Text>
+          <Text style={styles.footerSubText}>© 2024 パチスロニュース</Text>
+        </View>
+      );
+    }
+    
+    if (loadingMore) {
+      return (
+        <View style={styles.loadingMore}>
+          <ActivityIndicator size="small" color="#e74c3c" />
+          <Text style={styles.loadingMoreText}>読み込み中...</Text>
+        </View>
+      );
+    }
+    
+    return null;
+  };
+
+  // 空の状態
+  const EmptyComponent = () => (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyIcon}>📭</Text>
+      <Text style={styles.emptyText}>
+        {isSearching ? '検索結果がありません' : 'ニュースがありません'}
+      </Text>
+    </View>
+  );
+
+  // ニュースアイテムのレンダリング
+  const renderItem = ({ item, index }: { item: NewsItem; index: number }) => (
+    <NewsCard item={item} isTopNews={index === 0 && !isSearching} />
+  );
 
   return (
     <View style={styles.container}>
@@ -102,7 +191,7 @@ export default function App() {
           </View>
           <Text style={styles.headerTime}>{timeString} 更新</Text>
         </View>
-        <SearchBar onSearch={handleSearch} onClear={handleClearSearch} />
+        <SearchBar onSearch={(kw) => handleSearch(kw, true)} onClear={handleClearSearch} />
       </View>
 
       {/* カテゴリタブ */}
@@ -118,8 +207,15 @@ export default function App() {
           <Text style={styles.loadingText}>読み込み中...</Text>
         </View>
       ) : (
-        <ScrollView
-          style={styles.scrollView}
+        <FlatList
+          data={news}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          ListHeaderComponent={ListHeader}
+          ListFooterComponent={ListFooter}
+          ListEmptyComponent={EmptyComponent}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.3}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -129,77 +225,8 @@ export default function App() {
             />
           }
           showsVerticalScrollIndicator={false}
-        >
-          {news.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📭</Text>
-              <Text style={styles.emptyText}>
-                {isSearching ? '検索結果がありません' : 'ニュースがありません'}
-              </Text>
-            </View>
-          ) : (
-            <>
-              {/* トップニュース */}
-              {topNews && (
-                <View style={styles.section}>
-                  <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionIcon}>🔥</Text>
-                    <Text style={styles.sectionTitle}>トップニュース</Text>
-                  </View>
-                  <NewsCard item={topNews} isTopNews />
-                </View>
-              )}
-
-              {/* 最新ニュース一覧 */}
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionIcon}>📰</Text>
-                  <Text style={styles.sectionTitle}>最新ニュース</Text>
-                </View>
-                <View style={styles.newsList}>
-                  {otherNews.map((item) => (
-                    <NewsCard key={item.id} item={item} />
-                  ))}
-                </View>
-              </View>
-
-              {/* カテゴリ別セクション */}
-              {selectedCategory === 'all' && (
-                <>
-                  <TopicsSection 
-                    title="新台情報" 
-                    icon="🎰" 
-                    news={newMachineNews}
-                    color="#e74c3c"
-                  />
-                  <TopicsSection 
-                    title="業界動向" 
-                    icon="🏢" 
-                    news={industryNews}
-                    color="#3498db"
-                  />
-                  <TopicsSection 
-                    title="規制・法令" 
-                    icon="📋" 
-                    news={regulationNews}
-                    color="#27ae60"
-                  />
-                  <TopicsSection 
-                    title="メーカー情報" 
-                    icon="🏭" 
-                    news={makerNews}
-                    color="#9b59b6"
-                  />
-                </>
-              )}
-
-              {/* フッター */}
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>© 2024 パチスロニュース</Text>
-              </View>
-            </>
-          )}
-        </ScrollView>
+          contentContainerStyle={news.length === 0 ? styles.emptyList : undefined}
+        />
       )}
     </View>
   );
@@ -238,9 +265,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: 'rgba(255,255,255,0.8)',
   },
-  scrollView: {
-    flex: 1,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -252,29 +276,38 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
   },
-  section: {
+  listHeader: {
     backgroundColor: '#fff',
-    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
-  sectionHeader: {
+  statsBar: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
-  sectionIcon: {
-    fontSize: 18,
-    marginRight: 8,
-  },
-  sectionTitle: {
-    fontSize: 16,
+  statsText: {
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
   },
-  newsList: {
+  statsCount: {
+    fontSize: 12,
+    color: '#888',
+  },
+  loadingMore: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
     backgroundColor: '#fff',
+  },
+  loadingMoreText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#888',
   },
   emptyContainer: {
     flex: 1,
@@ -291,11 +324,20 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 16,
   },
+  emptyList: {
+    flexGrow: 1,
+  },
   footer: {
     padding: 20,
     alignItems: 'center',
+    backgroundColor: '#f0f0f0',
   },
   footerText: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 8,
+  },
+  footerSubText: {
     fontSize: 12,
     color: '#999',
   },
