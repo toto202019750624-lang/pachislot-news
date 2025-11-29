@@ -19,7 +19,7 @@ export const getNews = async (
     let query = supabase
       .from('news')
       .select('*', { count: 'exact' })
-      .order('fetched_at', { ascending: false })
+      .order('published_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (category && category !== 'all') {
@@ -56,7 +56,7 @@ export const searchNews = async (
       .from('news')
       .select('*', { count: 'exact' })
       .ilike('title', `%${keyword}%`)
-      .order('fetched_at', { ascending: false })
+      .order('published_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (error) {
@@ -81,8 +81,8 @@ export const getTodayNews = async (): Promise<NewsItem[]> => {
     const { data, error } = await supabase
       .from('news')
       .select('*')
-      .gte('fetched_at', today.toISOString())
-      .order('fetched_at', { ascending: false });
+      .gte('published_at', today.toISOString())
+      .order('published_at', { ascending: false });
 
     if (error) {
       console.error('今日のニュース取得エラー:', error.message);

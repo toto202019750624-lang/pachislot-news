@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Linking, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { NewsItem, NEWS_SOURCES } from '../types/news';
 
 interface NewsCardProps {
@@ -24,18 +24,27 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
     Linking.openURL(item.url);
   };
 
+  // 日付を西暦から表示（例: 2025/11/29）
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '';
     const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return `${year}/${month}/${day}`;
+  };
+
+  // 3日以内かどうかをチェック
+  const isNew = (dateString: string | null) => {
+    if (!dateString) return false;
+    const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-
-    if (diffMins < 60) return `${diffMins}分前`;
-    if (diffHours < 24) return `${diffHours}時間前`;
-    return date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    return diffDays <= 3;
   };
+
+  const showNewBadge = isNew(item.published_at);
 
   // トップニュース用の大きいカード
   if (isTopNews) {
@@ -55,6 +64,11 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
                item.category === 'maker' ? 'メーカー' : '業界'}
             </Text>
           </View>
+          {showNewBadge && (
+            <View style={styles.newBadgeTop}>
+              <Text style={styles.newBadgeText}>NEW</Text>
+            </View>
+          )}
         </View>
         <View style={styles.topContent}>
           <Text style={styles.topTitle} numberOfLines={2}>{item.title}</Text>
@@ -67,7 +81,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
     );
   }
 
-  // 通常のニュースカード（Yahoo風リスト）
+  // 通常のニュースカード（サムネなし）
   return (
     <TouchableOpacity 
       style={styles.card} 
@@ -75,15 +89,21 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
       activeOpacity={0.7}
     >
       <View style={styles.cardContent}>
-        <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
+        <View style={styles.titleRow}>
+          {showNewBadge && (
+            <View style={styles.newBadge}>
+              <Text style={styles.newBadgeTextSmall}>NEW</Text>
+            </View>
+          )}
+          <Text style={[styles.title, showNewBadge && styles.titleWithBadge]} numberOfLines={2}>
+            {item.title}
+          </Text>
+        </View>
         <View style={styles.meta}>
           <Text style={styles.source}>{sourceInfo?.name || item.source}</Text>
           <Text style={styles.separator}>•</Text>
           <Text style={styles.date}>{formatDate(item.published_at)}</Text>
         </View>
-      </View>
-      <View style={[styles.thumbnail, { backgroundColor: categoryStyle.bgColor }]}>
-        <Text style={styles.thumbnailIcon}>{categoryStyle.icon}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -145,6 +165,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
+  newBadgeTop: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: '#ff3b30',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  newBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
   topContent: {
     padding: 12,
   },
@@ -181,13 +215,33 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     flex: 1,
-    paddingRight: 12,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
   title: {
+    flex: 1,
     fontSize: 15,
     color: '#1a1a1a',
     lineHeight: 22,
     fontWeight: '500',
+  },
+  titleWithBadge: {
+    flex: 1,
+  },
+  newBadge: {
+    backgroundColor: '#ff3b30',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
+    marginRight: 8,
+    marginTop: 2,
+  },
+  newBadgeTextSmall: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
   },
   meta: {
     flexDirection: 'row',
@@ -207,17 +261,6 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 11,
     color: '#888',
-  },
-  thumbnail: {
-    width: 80,
-    height: 60,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  thumbnailIcon: {
-    fontSize: 24,
   },
 
   // コンパクトカード
