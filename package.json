@@ -10,10 +10,12 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.86.0",
+    "cheerio": "^1.1.2",
     "expo": "~54.0.25",
     "expo-linking": "^8.0.9",
     "expo-status-bar": "~3.0.8",
     "expo-web-browser": "^15.0.9",
+    "node-fetch": "^2.7.0",
     "react": "19.1.0",
     "react-native": "0.81.5",
     "rss-parser": "^3.13.0"

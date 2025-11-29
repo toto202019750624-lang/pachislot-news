@@ -60,7 +60,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
           <Text style={styles.topTitle} numberOfLines={2}>{item.title}</Text>
           <View style={styles.topMeta}>
             <Text style={styles.topSource}>{sourceInfo?.name || item.source}</Text>
-            <Text style={styles.topDate}>{formatDate(item.fetched_at)}</Text>
+            <Text style={styles.topDate}>{formatDate(item.published_at)}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -79,7 +79,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
         <View style={styles.meta}>
           <Text style={styles.source}>{sourceInfo?.name || item.source}</Text>
           <Text style={styles.separator}>•</Text>
-          <Text style={styles.date}>{formatDate(item.fetched_at)}</Text>
+          <Text style={styles.date}>{formatDate(item.published_at)}</Text>
         </View>
       </View>
       <View style={[styles.thumbnail, { backgroundColor: categoryStyle.bgColor }]}>
