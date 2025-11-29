@@ -1,0 +1,34 @@
+name: Fetch Pachislot News
+
+on:
+  # 毎日朝8時と夕方18時に実行（日本時間）
+  schedule:
+    - cron: '0 23 * * *'  # UTC 23:00 = JST 08:00
+    - cron: '0 9 * * *'   # UTC 09:00 = JST 18:00
+  
+  # 手動実行も可能
+  workflow_dispatch:
+
+jobs:
+  fetch-news:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm install @supabase/supabase-js rss-parser
+      
+      - name: Fetch and save news
+        run: node scripts/fetch-news.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+
