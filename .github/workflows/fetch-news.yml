@@ -1,9 +1,14 @@
 name: Fetch Pachislot News
 
 on:
-  # 2時間ごとに実行
+  # 1日6回実行（日本時間）
   schedule:
-    - cron: '0 */2 * * *'  # 毎時0分、2時間ごと
+    - cron: '0 21 * * *'  # UTC 21:00 = JST 06:00
+    - cron: '0 1 * * *'   # UTC 01:00 = JST 10:00
+    - cron: '0 3 * * *'   # UTC 03:00 = JST 12:00
+    - cron: '0 6 * * *'   # UTC 06:00 = JST 15:00
+    - cron: '0 9 * * *'   # UTC 09:00 = JST 18:00
+    - cron: '0 12 * * *'  # UTC 12:00 = JST 21:00
   
   # 手動実行も可能
   workflow_dispatch:
