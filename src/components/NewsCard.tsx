@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
-import { NewsItem, NEWS_SOURCES } from '../types/news';
+import { NewsItem } from '../types/news';
 
 interface NewsCardProps {
   item: NewsItem;
@@ -17,7 +17,6 @@ const CATEGORY_STYLES: { [key: string]: { icon: string; bgColor: string } } = {
 };
 
 export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) => {
-  const sourceInfo = NEWS_SOURCES.find(s => s.id === item.source);
   const categoryStyle = CATEGORY_STYLES[item.category] || CATEGORY_STYLES.industry;
   
   const handlePress = () => {
@@ -73,7 +72,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
         <View style={styles.topContent}>
           <Text style={styles.topTitle} numberOfLines={2}>{item.title}</Text>
           <View style={styles.topMeta}>
-            <Text style={styles.topSource}>{sourceInfo?.name || item.source}</Text>
+            <Text style={styles.topSource}>{item.source}</Text>
             <Text style={styles.topDate}>{formatDate(item.published_at)}</Text>
           </View>
         </View>
@@ -100,7 +99,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
           </Text>
         </View>
         <View style={styles.meta}>
-          <Text style={styles.source}>{sourceInfo?.name || item.source}</Text>
+          <Text style={styles.source}>{item.source}</Text>
           <Text style={styles.separator}>•</Text>
           <Text style={styles.date}>{formatDate(item.published_at)}</Text>
         </View>
