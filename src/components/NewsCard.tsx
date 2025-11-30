@@ -14,6 +14,7 @@ const CATEGORY_STYLES: { [key: string]: { icon: string; bgColor: string } } = {
   hall: { icon: '🏪', bgColor: '#f39c12' },
   maker: { icon: '🏭', bgColor: '#9b59b6' },
   industry: { icon: '🏢', bgColor: '#3498db' },
+  matome: { icon: '📝', bgColor: '#e67e22' },
 };
 
 export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) => {
@@ -60,7 +61,8 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
               {item.category === 'new_machine' ? '新台' : 
                item.category === 'regulation' ? '規制' :
                item.category === 'hall' ? 'ホール' :
-               item.category === 'maker' ? 'メーカー' : '業界'}
+               item.category === 'maker' ? 'メーカー' :
+               item.category === 'matome' ? 'まとめ' : '業界'}
             </Text>
           </View>
           {showNewBadge && (

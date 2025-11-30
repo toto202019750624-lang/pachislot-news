@@ -19,6 +19,7 @@ export const NEWS_CATEGORIES = [
   { id: 'regulation', label: '規制', icon: '📋' },
   { id: 'hall', label: 'ホール', icon: '🏪' },
   { id: 'maker', label: 'メーカー', icon: '🏭' },
+  { id: 'matome', label: 'まとめ', icon: '📝' },
 ] as const;
 
 export type CategoryId = typeof NEWS_CATEGORIES[number]['id'];

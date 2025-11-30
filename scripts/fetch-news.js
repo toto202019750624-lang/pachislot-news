@@ -9,6 +9,9 @@
 const Parser = require('rss-parser');
 const { createClient } = require('@supabase/supabase-js');
 
+// SSL証明書エラーを無視（まとめサイトの証明書が期限切れの場合）
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 // Supabase設定
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://pmeshocxacyhughagupo.supabase.co';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtZXNob2N4YWN5aHVnaGFndXBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMjkzMjUsImV4cCI6MjA3OTkwNTMyNX0.5oddZFEIHb7zG8vj7qIYAVhnKf_zas_hd8PkWAjCm1Q';
@@ -32,6 +35,13 @@ const SEARCH_QUERIES = [
   'パチンコホール',
 ];
 
+// まとめサイトのRSSフィード
+const MATOME_RSS_FEEDS = [
+  { url: 'https://pachinkopachisro.com/index.rdf', name: 'パチンコ・パチスロ.com' },
+  { url: 'http://blog.livedoor.jp/fiveslot777/index.rdf', name: 'スロ板-RUSH' },
+  { url: 'https://pachinkolist.com/index.rdf', name: 'ぱちんこドキュメント!!' },
+];
+
 // カテゴリ判定キーワード
 const CATEGORY_KEYWORDS = {
   new_machine: ['新台', '導入', 'スペック', '機種', '登場', '発売', 'デビュー', '導入開始'],
@@ -39,7 +49,15 @@ const CATEGORY_KEYWORDS = {
   hall: ['ホール', '店舗', '閉店', '開店', 'グランドオープン', '稼働', 'マルハン', 'ダイナム', 'ガイア'],
   maker: ['SANKYO', 'サンキョー', 'サミー', 'Sammy', '平和', '大都', 'ユニバーサル', '三洋', 'ニューギン', '京楽', '藤商事', 'メーカー', '開発'],
   industry: ['業界', '市場', '売上', '動向', '協会', '組合', '決算', '業績'],
+  matome: [], // まとめサイトはソースで判定
 };
+
+// まとめサイトのドメイン
+const MATOME_SITES = [
+  'pachinkopachislo.com',
+  'suroban.com', 
+  'pachidocu.com',
+];
 
 // ソース名のマッピング
 const SOURCE_MAPPING = {
@@ -62,11 +80,17 @@ const SOURCE_MAPPING = {
 };
 
 // カテゴリを判定
-function detectCategory(title) {
+function detectCategory(title, url = '') {
   const lowerTitle = title.toLowerCase();
+  const lowerUrl = url.toLowerCase();
+  
+  // まとめサイトかどうかをURLで判定
+  if (MATOME_SITES.some(site => lowerUrl.includes(site))) {
+    return 'matome';
+  }
   
   for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (keywords.some(keyword => lowerTitle.includes(keyword.toLowerCase()))) {
+    if (keywords.length > 0 && keywords.some(keyword => lowerTitle.includes(keyword.toLowerCase()))) {
       return category;
     }
   }
@@ -196,7 +220,7 @@ async function fetchGoogleNews(query) {
         title: cleanTitle,
         url: item.link,
         source: source,
-        category: detectCategory(item.title),
+        category: detectCategory(item.title, item.link),
         published_at: item.pubDate ? new Date(item.pubDate).toISOString() : null,
         summary: item.contentSnippet || null,
       };
@@ -207,11 +231,54 @@ async function fetchGoogleNews(query) {
   }
 }
 
+// まとめサイトのRSSからニュースを取得
+async function fetchMatomeNews() {
+  const allNews = [];
+  
+  for (const feed of MATOME_RSS_FEEDS) {
+    try {
+      console.log(`  まとめサイト: "${feed.name}"`);
+      const feedData = await parser.parseURL(feed.url);
+      
+      const news = feedData.items.map(item => {
+        // 日付を取得（isoDate > dc:date > pubDate の優先順位）
+        let publishedAt = null;
+        if (item.isoDate) {
+          publishedAt = new Date(item.isoDate).toISOString();
+        } else if (item['dc:date']) {
+          publishedAt = new Date(item['dc:date']).toISOString();
+        } else if (item.pubDate) {
+          publishedAt = new Date(item.pubDate).toISOString();
+        }
+        
+        return {
+          title: item.title?.trim() || '',
+          url: item.link || '',
+          source: feed.name,
+          category: 'matome',
+          published_at: publishedAt,
+          summary: item.contentSnippet?.substring(0, 200) || null,
+        };
+      });
+      
+      allNews.push(...news);
+      console.log(`    → ${news.length}件取得`);
+    } catch (error) {
+      console.error(`  ⚠️ ${feed.name}: ${error.message}`);
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  
+  return allNews;
+}
+
 // 全てのクエリからニュースを取得
 async function fetchAllNews() {
   const allNews = [];
   const seenUrls = new Set();
   
+  // Google Newsから取得
   for (const query of SEARCH_QUERIES) {
     const news = await fetchGoogleNews(query);
     
@@ -225,6 +292,17 @@ async function fetchAllNews() {
     
     // レート制限を避けるため少し待機
     await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  
+  // まとめサイトから取得
+  console.log('\n📝 まとめサイトからニュースを取得中...\n');
+  const matomeNews = await fetchMatomeNews();
+  
+  for (const item of matomeNews) {
+    if (item.url && !seenUrls.has(item.url)) {
+      seenUrls.add(item.url);
+      allNews.push(item);
+    }
   }
   
   // タイトルの類似度で重複除去
@@ -315,7 +393,7 @@ async function main() {
     });
     console.log('\n📊 カテゴリ別内訳:');
     Object.entries(categoryCount).forEach(([cat, count]) => {
-      const icons = { new_machine: '🎰', regulation: '📋', hall: '🏪', maker: '🏭', industry: '🏢' };
+      const icons = { new_machine: '🎰', regulation: '📋', hall: '🏪', maker: '🏭', industry: '🏢', matome: '📝' };
       console.log(`  ${icons[cat] || '📰'} ${cat}: ${count}件`);
     });
 
