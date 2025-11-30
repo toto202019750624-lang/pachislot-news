@@ -14,11 +14,8 @@ export interface NewsItem {
 // カテゴリ定義
 export const NEWS_CATEGORIES = [
   { id: 'all', label: '全て', icon: '📰' },
-  { id: 'new_machine', label: '新台', icon: '🎰' },
+  { id: 'maker', label: 'メーカー', icon: '🎰' },
   { id: 'industry', label: '業界', icon: '🏢' },
-  { id: 'regulation', label: '規制', icon: '📋' },
-  { id: 'hall', label: 'ホール', icon: '🏪' },
-  { id: 'maker', label: 'メーカー', icon: '🏭' },
   { id: 'matome', label: 'まとめ', icon: '📝' },
 ] as const;
 

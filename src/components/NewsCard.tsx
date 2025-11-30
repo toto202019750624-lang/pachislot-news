@@ -9,10 +9,7 @@ interface NewsCardProps {
 
 // カテゴリ別のアイコンと色
 const CATEGORY_STYLES: { [key: string]: { icon: string; bgColor: string } } = {
-  new_machine: { icon: '🎰', bgColor: '#e74c3c' },
-  regulation: { icon: '📋', bgColor: '#27ae60' },
-  hall: { icon: '🏪', bgColor: '#f39c12' },
-  maker: { icon: '🏭', bgColor: '#9b59b6' },
+  maker: { icon: '🎰', bgColor: '#e74c3c' },
   industry: { icon: '🏢', bgColor: '#3498db' },
   matome: { icon: '📝', bgColor: '#e67e22' },
 };
@@ -58,10 +55,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
           <Text style={styles.topImageIcon}>{categoryStyle.icon}</Text>
           <View style={styles.categoryBadge}>
             <Text style={styles.categoryBadgeText}>
-              {item.category === 'new_machine' ? '新台' : 
-               item.category === 'regulation' ? '規制' :
-               item.category === 'hall' ? 'ホール' :
-               item.category === 'maker' ? 'メーカー' :
+              {item.category === 'maker' ? 'メーカー' :
                item.category === 'matome' ? 'まとめ' : '業界'}
             </Text>
           </View>
