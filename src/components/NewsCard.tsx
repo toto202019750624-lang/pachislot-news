@@ -72,7 +72,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
           </View>
           {showNewBadge && (
             <View style={styles.newBadgeTop}>
-              <Text style={styles.newBadgeText}>NEW</Text>
+              <Text style={styles.newBadgeTopText}>NEW</Text>
             </View>
           )}
         </View>
@@ -97,15 +97,20 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
       <View style={styles.cardContent}>
         <View style={styles.titleRow}>
           {showNewBadge && (
-            <View style={styles.newBadge}>
-              <Text style={styles.newBadgeTextSmall}>NEW</Text>
-            </View>
+            <Text style={styles.newText}>NEW </Text>
           )}
           <Text style={[styles.title, showNewBadge && styles.titleWithBadge]} numberOfLines={2}>
             {item.title}
           </Text>
         </View>
         <View style={styles.meta}>
+          <View style={[styles.categoryTag, { backgroundColor: categoryStyle.bgColor }]}>
+            <Text style={styles.categoryTagText}>
+              {item.category === 'maker' ? 'メーカー' :
+               item.category === 'matome' ? 'まとめ' :
+               item.category === 'youtube' ? 'YouTube' : '業界'}
+            </Text>
+          </View>
           <Text style={styles.source}>{item.source}</Text>
           <Text style={styles.separator}>•</Text>
           <Text style={styles.date}>{formatDate(item.published_at)}</Text>
@@ -181,13 +186,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: '#ff3b30',
+    backgroundColor: 'rgba(255,255,255,0.9)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
   },
-  newBadgeText: {
-    color: '#fff',
+  newBadgeTopText: {
+    color: '#e74c3c',
     fontSize: 11,
     fontWeight: 'bold',
   },
@@ -242,17 +247,9 @@ const styles = StyleSheet.create({
   titleWithBadge: {
     flex: 1,
   },
-  newBadge: {
-    backgroundColor: '#ff3b30',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 3,
-    marginRight: 8,
-    marginTop: 2,
-  },
-  newBadgeTextSmall: {
-    color: '#fff',
-    fontSize: 9,
+  newText: {
+    color: '#e74c3c',
+    fontSize: 12,
     fontWeight: 'bold',
   },
   meta: {
@@ -278,6 +275,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#ff0000',
     fontWeight: '600',
+  },
+  categoryTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  categoryTagText: {
+    fontSize: 9,
+    color: '#fff',
+    fontWeight: 'bold',
   },
 
   // コンパクトカード
