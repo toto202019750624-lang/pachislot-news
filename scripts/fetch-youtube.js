@@ -1,7 +1,7 @@
 /**
  * YouTube動画取得スクリプト
  * 
- * パチンコ・パチスロ関連の人気動画を取得してSupabaseに保存
+ * パチンコ・パチスロ関連の人気チャンネルから動画を取得してSupabaseに保存
  */
 
 const { google } = require('googleapis');
@@ -16,32 +16,64 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://pmeshocxacyhughagupo.s
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBtZXNob2N4YWN5aHVnaGFndXBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMjkzMjUsImV4cCI6MjA3OTkwNTMyNX0.5oddZFEIHb7zG8vj7qIYAVhnKf_zas_hd8PkWAjCm1Q';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// 検索キーワード
-const SEARCH_QUERIES = [
-  'パチンコ 新台',
-  'パチスロ 新台',
-  'パチンコ 実践',
-  'パチスロ 実践',
+// 対象チャンネル（チャンネル名で検索してIDを取得）
+const TARGET_CHANNELS = [
+  // 現在取得済み
+  'きむちゃんねる',
+  'すろぱちすてぇしょん',
+  'スロパチステーション',
+  'あすピヨのパチ部屋',
+  'やっちゃんの崖っぷちスロパチ生活',
+  '777パチガブチャンネル',
+  'パチスロードch',
+  // 追加希望
+  '桜高虎',
+  'だいいち！チャンネル',
+  '1GAME TV',
+  'ジャンバリ.TV',
+  '日直島田',
+  'よしきの成り上がり',
+  'いそまるの成り上がり',
+  'じゃんじゃんの型破り',
 ];
 
 // 再生回数の閾値（5万回以上）
 const MIN_VIEW_COUNT = 50000;
 
-// YouTube動画を検索
-async function searchYouTubeVideos(query) {
+// チャンネル名からチャンネルIDを取得
+async function getChannelId(channelName) {
   try {
-    console.log(`  検索中: "${query}"`);
-    
-    // 動画を検索（過去7日間）
+    const response = await youtube.search.list({
+      part: 'snippet',
+      q: channelName,
+      type: 'channel',
+      maxResults: 1,
+    });
+
+    if (response.data.items && response.data.items.length > 0) {
+      return {
+        id: response.data.items[0].id.channelId,
+        name: response.data.items[0].snippet.title,
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error(`  チャンネル検索エラー (${channelName}):`, error.message);
+    return null;
+  }
+}
+
+// チャンネルから最新動画を取得
+async function getChannelVideos(channelId, channelName) {
+  try {
+    // チャンネルの最新動画を検索（過去14日間）
     const searchResponse = await youtube.search.list({
       part: 'snippet',
-      q: query,
+      channelId: channelId,
       type: 'video',
-      order: 'viewCount',
-      publishedAfter: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      order: 'date',
+      publishedAfter: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
       maxResults: 10,
-      regionCode: 'JP',
-      relevanceLanguage: 'ja',
     });
 
     if (!searchResponse.data.items || searchResponse.data.items.length === 0) {
@@ -65,7 +97,7 @@ async function searchYouTubeVideos(query) {
       .map(video => ({
         title: video.snippet.title,
         url: `https://www.youtube.com/watch?v=${video.id}`,
-        source: video.snippet.channelTitle,
+        source: channelName,
         category: 'youtube',
         published_at: new Date(video.snippet.publishedAt).toISOString(),
         summary: video.snippet.description?.substring(0, 200) || null,
@@ -73,37 +105,59 @@ async function searchYouTubeVideos(query) {
         view_count: parseInt(video.statistics.viewCount || '0', 10),
       }));
 
-    console.log(`    → ${videos.length}件（5万回以上）`);
     return videos;
   } catch (error) {
-    console.error(`  エラー (${query}):`, error.message);
+    console.error(`  動画取得エラー (${channelName}):`, error.message);
     return [];
   }
 }
 
-// 全クエリから動画を取得
+// 全チャンネルから動画を取得
 async function fetchAllYouTubeVideos() {
   const allVideos = [];
   const seenUrls = new Set();
+  const channelResults = [];
 
-  for (const query of SEARCH_QUERIES) {
-    const videos = await searchYouTubeVideos(query);
+  console.log(`📺 ${TARGET_CHANNELS.length}チャンネルから動画を取得中...\n`);
+
+  for (const channelName of TARGET_CHANNELS) {
+    console.log(`  🔍 ${channelName}`);
     
+    // チャンネルIDを取得
+    const channel = await getChannelId(channelName);
+    
+    if (!channel) {
+      console.log(`    ⚠️ チャンネルが見つかりません`);
+      continue;
+    }
+
+    // チャンネルから動画を取得
+    const videos = await getChannelVideos(channel.id, channel.name);
+    
+    let addedCount = 0;
     for (const video of videos) {
       if (!seenUrls.has(video.url)) {
         seenUrls.add(video.url);
         allVideos.push(video);
+        addedCount++;
       }
     }
 
+    if (addedCount > 0) {
+      console.log(`    ✅ ${addedCount}件（5万回以上）`);
+      channelResults.push({ name: channel.name, count: addedCount });
+    } else {
+      console.log(`    → 条件を満たす動画なし`);
+    }
+
     // レート制限を避けるため待機
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 300));
   }
 
   // 再生回数順にソート
   allVideos.sort((a, b) => b.view_count - a.view_count);
 
-  return allVideos;
+  return { videos: allVideos, channelResults };
 }
 
 // 動画をSupabaseに保存
@@ -152,7 +206,7 @@ async function main() {
 
   try {
     console.log('\n📡 YouTube APIから動画を取得中...\n');
-    const videos = await fetchAllYouTubeVideos();
+    const { videos, channelResults } = await fetchAllYouTubeVideos();
     console.log(`\n✅ 取得件数: ${videos.length}件（再生回数5万回以上）`);
 
     if (videos.length === 0) {
@@ -161,17 +215,14 @@ async function main() {
     }
 
     // チャンネル別の内訳を表示
-    const channelCount = {};
-    videos.forEach(v => {
-      channelCount[v.source] = (channelCount[v.source] || 0) + 1;
-    });
-    console.log('\n📺 チャンネル別内訳:');
-    Object.entries(channelCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .forEach(([channel, count]) => {
-        console.log(`  ${channel}: ${count}件`);
-      });
+    if (channelResults.length > 0) {
+      console.log('\n📺 チャンネル別内訳:');
+      channelResults
+        .sort((a, b) => b.count - a.count)
+        .forEach(({ name, count }) => {
+          console.log(`  ${name}: ${count}件`);
+        });
+    }
 
     // 上位動画を表示
     console.log('\n🔥 再生回数TOP5:');
@@ -202,4 +253,3 @@ async function main() {
 }
 
 main();
-
