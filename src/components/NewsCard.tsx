@@ -32,6 +32,15 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
     return `${year}/${month}/${day}`;
   };
 
+  // 再生回数をフォーマット（例: 120.5万回）
+  const formatViewCount = (count: number | null) => {
+    if (!count) return '';
+    if (count >= 10000) {
+      return `${(count / 10000).toFixed(1)}万回`;
+    }
+    return `${count.toLocaleString()}回`;
+  };
+
   // 3日以内かどうかをチェック
   const isNew = (dateString: string | null) => {
     if (!dateString) return false;
@@ -100,6 +109,12 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
           <Text style={styles.source}>{item.source}</Text>
           <Text style={styles.separator}>•</Text>
           <Text style={styles.date}>{formatDate(item.published_at)}</Text>
+          {item.category === 'youtube' && item.view_count && (
+            <>
+              <Text style={styles.separator}>•</Text>
+              <Text style={styles.viewCount}>▶ {formatViewCount(item.view_count)}</Text>
+            </>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -258,6 +273,11 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 11,
     color: '#888',
+  },
+  viewCount: {
+    fontSize: 11,
+    color: '#ff0000',
+    fontWeight: '600',
   },
 
   // コンパクトカード

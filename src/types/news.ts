@@ -9,6 +9,7 @@ export interface NewsItem {
   fetched_at: string;
   summary: string | null;
   image_url: string | null;
+  view_count: number | null;
 }
 
 // カテゴリ定義

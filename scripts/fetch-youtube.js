@@ -168,14 +168,12 @@ async function saveVideos(videos) {
 
   for (const video of videos) {
     try {
-      // view_countを除去してDBに保存
-      const { view_count, ...videoData } = video;
-      
+      // view_countも含めてDBに保存
       const { error } = await supabase
         .from('news')
-        .upsert(videoData, {
+        .upsert(video, {
           onConflict: 'url',
-          ignoreDuplicates: true
+          ignoreDuplicates: false  // 再生回数を更新するため
         });
 
       if (error) {
