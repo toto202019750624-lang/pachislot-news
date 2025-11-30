@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { NewsCard, CategoryTabs, SearchBar } from './src/components';
-import { getNews, searchNews } from './src/services/supabase';
+import { getNews, searchNews, getLastUpdatedTime } from './src/services/supabase';
 import { NewsItem, CategoryId } from './src/types/news';
 
 const PAGE_SIZE = 30;
@@ -26,6 +26,7 @@ export default function App() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [totalCount, setTotalCount] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   // ニュースを取得
   const fetchNews = useCallback(async (category?: CategoryId, reset: boolean = true) => {
@@ -49,9 +50,16 @@ export default function App() {
     }
   }, [news.length]);
 
+  // 最終更新日時を取得
+  const fetchLastUpdated = useCallback(async () => {
+    const time = await getLastUpdatedTime();
+    setLastUpdated(time);
+  }, []);
+
   // 初回読み込み
   useEffect(() => {
     fetchNews();
+    fetchLastUpdated();
   }, []);
 
   // カテゴリ変更時
@@ -67,6 +75,7 @@ export default function App() {
   // プルダウン更新
   const handleRefresh = () => {
     setRefreshing(true);
+    fetchLastUpdated();
     if (isSearching && searchKeyword) {
       handleSearch(searchKeyword, true);
     } else {
@@ -124,9 +133,18 @@ export default function App() {
     fetchNews(selectedCategory, true);
   };
 
-  // 現在時刻
-  const now = new Date();
-  const timeString = `${now.getMonth() + 1}/${now.getDate()} ${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+  // 最終更新日時をフォーマット
+  const formatLastUpdated = (dateString: string | null) => {
+    if (!dateString) return '---';
+    const date = new Date(dateString);
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${month}/${day} ${hours}:${minutes}`;
+  };
+
+  const timeString = formatLastUpdated(lastUpdated);
 
   // ヘッダーコンポーネント
   const ListHeader = () => (

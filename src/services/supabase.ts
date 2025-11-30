@@ -96,4 +96,25 @@ export const getTodayNews = async (): Promise<NewsItem[]> => {
   }
 };
 
+// 最終更新日時を取得
+export const getLastUpdatedTime = async (): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('news')
+      .select('fetched_at')
+      .order('fetched_at', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('最終更新日時取得エラー:', error.message);
+      return null;
+    }
+
+    return data && data.length > 0 ? data[0].fetched_at : null;
+  } catch (error) {
+    console.error('最終更新日時取得エラー:', error);
+    return null;
+  }
+};
+
 
