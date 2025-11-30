@@ -42,6 +42,12 @@ const MATOME_RSS_FEEDS = [
   { url: 'https://pachinkolist.com/index.rdf', name: 'ぱちんこドキュメント!!' },
 ];
 
+// 解析サイトのRSSフィード
+const KAISEKI_RSS_FEEDS = [
+  { url: 'https://chonborista.com/feed/', name: 'ちょんぼりすた' },
+  { url: 'https://nana-press.com/kaiseki/feed/', name: 'なな徹' },
+];
+
 // カテゴリ判定キーワード
 // メーカー = 新台 + メーカー情報
 // 業界 = 業界 + 規制 + ホール
@@ -285,6 +291,48 @@ async function fetchMatomeNews() {
   return allNews;
 }
 
+// 解析サイトのRSSからニュースを取得
+async function fetchKaisekiNews() {
+  const allNews = [];
+  
+  for (const feed of KAISEKI_RSS_FEEDS) {
+    try {
+      console.log(`  解析サイト: "${feed.name}"`);
+      const feedData = await parser.parseURL(feed.url);
+      
+      const news = feedData.items.map(item => {
+        // 日付を取得
+        let publishedAt = null;
+        if (item.isoDate) {
+          publishedAt = new Date(item.isoDate).toISOString();
+        } else if (item['dc:date']) {
+          publishedAt = new Date(item['dc:date']).toISOString();
+        } else if (item.pubDate) {
+          publishedAt = new Date(item.pubDate).toISOString();
+        }
+        
+        return {
+          title: item.title?.trim() || '',
+          url: item.link || '',
+          source: feed.name,
+          category: 'kaiseki',
+          published_at: publishedAt,
+          summary: item.contentSnippet?.substring(0, 200) || null,
+        };
+      });
+      
+      allNews.push(...news);
+      console.log(`    → ${news.length}件取得`);
+    } catch (error) {
+      console.error(`  ⚠️ ${feed.name}: ${error.message}`);
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  
+  return allNews;
+}
+
 // 全てのクエリからニュースを取得
 async function fetchAllNews() {
   const allNews = [];
@@ -311,6 +359,17 @@ async function fetchAllNews() {
   const matomeNews = await fetchMatomeNews();
   
   for (const item of matomeNews) {
+    if (item.url && !seenUrls.has(item.url)) {
+      seenUrls.add(item.url);
+      allNews.push(item);
+    }
+  }
+
+  // 解析サイトから取得
+  console.log('\n📊 解析サイトからニュースを取得中...\n');
+  const kaisekiNews = await fetchKaisekiNews();
+  
+  for (const item of kaisekiNews) {
     if (item.url && !seenUrls.has(item.url)) {
       seenUrls.add(item.url);
       allNews.push(item);
@@ -405,7 +464,7 @@ async function main() {
     });
     console.log('\n📊 カテゴリ別内訳:');
     Object.entries(categoryCount).forEach(([cat, count]) => {
-      const icons = { maker: '🎰', industry: '🏢', matome: '📝' };
+      const icons = { maker: '🎰', industry: '🏢', matome: '📝', kaiseki: '📊' };
       console.log(`  ${icons[cat] || '📰'} ${cat}: ${count}件`);
     });
 

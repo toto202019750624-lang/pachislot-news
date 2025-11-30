@@ -17,6 +17,7 @@ export const NEWS_CATEGORIES = [
   { id: 'all', label: '全て', icon: '📰' },
   { id: 'maker', label: 'メーカー', icon: '🎰' },
   { id: 'industry', label: '業界', icon: '🏢' },
+  { id: 'kaiseki', label: '解析', icon: '📊' },
   { id: 'matome', label: 'まとめ', icon: '📝' },
   { id: 'youtube', label: 'YouTube', icon: '🎬' },
 ] as const;
