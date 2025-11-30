@@ -17,6 +17,7 @@ export const NEWS_CATEGORIES = [
   { id: 'maker', label: 'メーカー', icon: '🎰' },
   { id: 'industry', label: '業界', icon: '🏢' },
   { id: 'matome', label: 'まとめ', icon: '📝' },
+  { id: 'youtube', label: 'YouTube', icon: '🎬' },
 ] as const;
 
 export type CategoryId = typeof NEWS_CATEGORIES[number]['id'];
