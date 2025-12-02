@@ -47,8 +47,13 @@ const MATOME_RSS_FEEDS = [
 
 // 解析サイトのRSSフィード
 const KAISEKI_RSS_FEEDS = [
-  { url: 'https://chonborista.com/feed/', name: 'ちょんぼりすた' },
+  // ちょんぼりすたはスクレイピングで取得するためRSSから除外
   { url: 'https://nana-press.com/kaiseki/feed/', name: 'なな徹' },
+];
+
+// スクレイピング対象の解析サイト
+const KAISEKI_SCRAPE_SITES = [
+  { url: 'https://chonborista.com/', name: 'ちょんぼりすた' },
 ];
 
 // カテゴリ判定キーワード
@@ -389,10 +394,101 @@ async function fetchMatomeNews() {
   return allNews;
 }
 
+// ちょんぼりすたの更新情報をスクレイピングで取得
+async function fetchChonboristaNews() {
+  const news = [];
+  
+  try {
+    console.log(`  解析サイト: "ちょんぼりすた" (スクレイピング)`);
+    
+    const response = await fetch('https://chonborista.com/', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'ja,en-US;q=0.7,en;q=0.3',
+      },
+    });
+    
+    if (!response.ok) {
+      console.error(`    ⚠️ HTTPエラー: ${response.status}`);
+      return [];
+    }
+    
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    
+    // 更新情報エリアを抽出
+    // 「更新情報」セクションのリストアイテムを取得
+    $('ul li').each((index, element) => {
+      const $li = $(element);
+      const text = $li.text().trim();
+      
+      // 日付パターン（2025/12/01 など）を含むものを抽出
+      const dateMatch = text.match(/(\d{4}\/\d{1,2}\/\d{1,2})/);
+      if (dateMatch) {
+        const $link = $li.find('a').first();
+        const url = $link.attr('href');
+        let title = $link.text().trim();
+        
+        // タイトルがない場合はテキスト全体から日付を除いた部分を使用
+        if (!title) {
+          title = text.replace(dateMatch[0], '').replace(/NEW\s*!?\s*/i, '').trim();
+        }
+        
+        if (url && title && title.length > 5) {
+          // 日付をパース
+          const dateParts = dateMatch[1].split('/');
+          const publishedAt = new Date(
+            parseInt(dateParts[0]),
+            parseInt(dateParts[1]) - 1,
+            parseInt(dateParts[2])
+          ).toISOString();
+          
+          // 絶対URLに変換
+          const fullUrl = url.startsWith('http') ? url : `https://chonborista.com${url.startsWith('/') ? '' : '/'}${url}`;
+          
+          news.push({
+            title: title,
+            url: fullUrl,
+            source: 'ちょんぼりすた',
+            category: 'kaiseki',
+            published_at: publishedAt,
+            summary: null,
+          });
+        }
+      }
+    });
+    
+    // 重複除去
+    const uniqueNews = [];
+    const seenUrls = new Set();
+    for (const item of news) {
+      if (!seenUrls.has(item.url)) {
+        seenUrls.add(item.url);
+        uniqueNews.push(item);
+      }
+    }
+    
+    console.log(`    → ${uniqueNews.length}件取得`);
+    return uniqueNews;
+    
+  } catch (error) {
+    console.error(`  ⚠️ ちょんぼりすた: ${error.message}`);
+    return [];
+  }
+}
+
 // 解析サイトのRSSからニュースを取得
 async function fetchKaisekiNews() {
   const allNews = [];
   
+  // ちょんぼりすたをスクレイピングで取得
+  const chonboristaNews = await fetchChonboristaNews();
+  allNews.push(...chonboristaNews);
+  
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  // その他の解析サイトはRSSで取得
   for (const feed of KAISEKI_RSS_FEEDS) {
     try {
       console.log(`  解析サイト: "${feed.name}"`);
