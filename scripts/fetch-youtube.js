@@ -35,7 +35,12 @@ const TARGET_CHANNELS = [
   'よしきの成り上がり',
   'いそまるの成り上がり',
   'じゃんじゃんの型破り',
-  'セブンズTV',
+  "SEVEN'S TV", // セブンズTV（正式名称）
+];
+
+// チャンネルハンドル（@xxx）からIDを取得するための追加リスト
+const CHANNEL_HANDLES = [
+  { handle: '@SEVENSTV', name: "SEVEN'S TV" },
 ];
 
 // 再生回数の閾値（5万回以上）
@@ -60,6 +65,41 @@ async function getChannelId(channelName) {
     return null;
   } catch (error) {
     console.error(`  チャンネル検索エラー (${channelName}):`, error.message);
+    return null;
+  }
+}
+
+// チャンネルハンドル（@xxx）からチャンネルIDを取得
+async function getChannelIdByHandle(handle, displayName) {
+  try {
+    const response = await youtube.search.list({
+      part: 'snippet',
+      q: handle,
+      type: 'channel',
+      maxResults: 5,
+    });
+
+    if (response.data.items && response.data.items.length > 0) {
+      // ハンドルに最も近いチャンネルを探す
+      for (const item of response.data.items) {
+        const title = item.snippet.title.toLowerCase();
+        const searchHandle = handle.replace('@', '').toLowerCase();
+        if (title.includes(searchHandle) || title.includes('seven')) {
+          return {
+            id: item.id.channelId,
+            name: item.snippet.title,
+          };
+        }
+      }
+      // 見つからない場合は最初の結果を返す
+      return {
+        id: response.data.items[0].id.channelId,
+        name: response.data.items[0].snippet.title,
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error(`  ハンドル検索エラー (${handle}):`, error.message);
     return null;
   }
 }
@@ -119,8 +159,10 @@ async function fetchAllYouTubeVideos() {
   const seenUrls = new Set();
   const channelResults = [];
 
-  console.log(`📺 ${TARGET_CHANNELS.length}チャンネルから動画を取得中...\n`);
+  const totalChannels = TARGET_CHANNELS.length + CHANNEL_HANDLES.length;
+  console.log(`📺 ${totalChannels}チャンネルから動画を取得中...\n`);
 
+  // 通常のチャンネル名で検索
   for (const channelName of TARGET_CHANNELS) {
     console.log(`  🔍 ${channelName}`);
     
@@ -152,6 +194,38 @@ async function fetchAllYouTubeVideos() {
     }
 
     // レート制限を避けるため待機
+    await new Promise(resolve => setTimeout(resolve, 300));
+  }
+
+  // ハンドル（@xxx）で検索
+  for (const { handle, name } of CHANNEL_HANDLES) {
+    console.log(`  🔍 ${name} (${handle})`);
+    
+    const channel = await getChannelIdByHandle(handle, name);
+    
+    if (!channel) {
+      console.log(`    ⚠️ チャンネルが見つかりません`);
+      continue;
+    }
+
+    const videos = await getChannelVideos(channel.id, channel.name);
+    
+    let addedCount = 0;
+    for (const video of videos) {
+      if (!seenUrls.has(video.url)) {
+        seenUrls.add(video.url);
+        allVideos.push(video);
+        addedCount++;
+      }
+    }
+
+    if (addedCount > 0) {
+      console.log(`    ✅ ${addedCount}件（5万回以上）`);
+      channelResults.push({ name: channel.name, count: addedCount });
+    } else {
+      console.log(`    → 条件を満たす動画なし`);
+    }
+
     await new Promise(resolve => setTimeout(resolve, 300));
   }
 
