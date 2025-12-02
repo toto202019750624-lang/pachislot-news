@@ -11,7 +11,7 @@ interface NewsCardProps {
 
 // カテゴリ別のアイコンと色
 const CATEGORY_STYLES: { [key: string]: { icon: string; bgColor: string } } = {
-  event: { icon: '🎪', bgColor: '#e91e63' },
+  event: { icon: '🎪', bgColor: '#9b59b6' }, // 紫色
   maker: { icon: '🎰', bgColor: '#e74c3c' },
   industry: { icon: '🏢', bgColor: '#3498db' },
   kaiseki: { icon: '📊', bgColor: '#9b59b6' },
@@ -141,7 +141,8 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
         <View style={styles.meta}>
           <View style={[styles.categoryTag, { backgroundColor: categoryStyle.bgColor }]}>
             <Text style={styles.categoryTagText}>
-              {item.category === 'maker' ? 'メーカー' :
+              {item.category === 'event' ? 'イベント' :
+               item.category === 'maker' ? 'メーカー' :
                item.category === 'kaiseki' ? '解析' :
                item.category === 'matome' ? 'まとめ' :
                item.category === 'youtube' ? 'YouTube' : '業界'}

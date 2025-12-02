@@ -36,14 +36,7 @@ const SEARCH_QUERIES = [
   'パチンコホール',
 ];
 
-// イベント関連の検索キーワード
-const EVENT_SEARCH_QUERIES = [
-  'パチンコ 来店',
-  'パチスロ 来店',
-  'パチンコ ライター 来店',
-  'パチスロ 取材',
-  'パチンコ イベント',
-];
+// イベント情報は fetch-events.js (P-WORLD) で取得するため、ここでは取得しない
 
 // まとめサイトのRSSフィード
 const MATOME_RSS_FEEDS = [
@@ -459,23 +452,7 @@ async function fetchAllNews() {
     await new Promise(resolve => setTimeout(resolve, 500));
   }
 
-  // イベント関連ニュースを取得
-  console.log('\n🎪 イベント関連ニュースを取得中...\n');
-  for (const query of EVENT_SEARCH_QUERIES) {
-    const news = await fetchGoogleNews(query);
-    
-    // URL重複を除去し、カテゴリをeventに設定
-    for (const item of news) {
-      if (!seenUrls.has(item.url)) {
-        seenUrls.add(item.url);
-        // イベント検索で取得したものはeventカテゴリに
-        item.category = 'event';
-        allNews.push(item);
-      }
-    }
-    
-    await new Promise(resolve => setTimeout(resolve, 500));
-  }
+  // イベント情報は fetch-events.js (P-WORLD) で別途取得
   
   // まとめサイトから取得
   console.log('\n📝 まとめサイトからニュースを取得中...\n');
