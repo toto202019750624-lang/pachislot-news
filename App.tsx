@@ -9,12 +9,17 @@ import {
   Platform,
   ActivityIndicator,
   TouchableOpacity,
+  useWindowDimensions,
 } from 'react-native';
 import { NewsCard, CategoryTabs, SearchBar, AnimatedLogo } from './src/components';
 import { getNews, searchNews, getLastUpdatedTime } from './src/services/supabase';
 import { NewsItem, CategoryId } from './src/types/news';
 
 const PAGE_SIZE = 30;
+
+// Web用の最大幅
+const MAX_CONTENT_WIDTH = 680;
+const isWeb = Platform.OS === 'web';
 
 export default function App() {
   const [news, setNews] = useState<NewsItem[]>([]);
@@ -196,53 +201,75 @@ export default function App() {
     <NewsCard item={item} isTopNews={index === 0 && !isSearching} />
   );
 
+  // Web用のコンテンツラッパー
+  const ContentWrapper = ({ children }: { children: React.ReactNode }) => {
+    if (isWeb) {
+      return (
+        <View style={styles.webWrapper}>
+          <View style={styles.webContent}>
+            {children}
+          </View>
+        </View>
+      );
+    }
+    return <>{children}</>;
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
       
       {/* ヘッダー */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <AnimatedLogo />
-          <Text style={styles.headerTime}>{timeString} 更新</Text>
+        <View style={[styles.headerInner, isWeb && styles.webHeaderInner]}>
+          <View style={styles.headerTop}>
+            <AnimatedLogo />
+            <Text style={styles.headerTime}>{timeString} 更新</Text>
+          </View>
+          <SearchBar onSearch={(kw) => handleSearch(kw, true)} onClear={handleClearSearch} />
         </View>
-        <SearchBar onSearch={(kw) => handleSearch(kw, true)} onClear={handleClearSearch} />
       </View>
 
       {/* カテゴリタブ */}
-      <CategoryTabs
-        selectedCategory={selectedCategory}
-        onSelectCategory={handleCategoryChange}
-      />
+      <View style={[isWeb && styles.webCategoryWrapper]}>
+        <View style={[isWeb && styles.webCategoryInner]}>
+          <CategoryTabs
+            selectedCategory={selectedCategory}
+            onSelectCategory={handleCategoryChange}
+          />
+        </View>
+      </View>
 
       {/* コンテンツ */}
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#e74c3c" />
-          <Text style={styles.loadingText}>読み込み中...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={news}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
-          ListHeaderComponent={ListHeader}
-          ListFooterComponent={ListFooter}
-          ListEmptyComponent={EmptyComponent}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.3}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor="#e74c3c"
-              colors={['#e74c3c']}
-            />
-          }
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={news.length === 0 ? styles.emptyList : undefined}
-        />
-      )}
+      <ContentWrapper>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#e74c3c" />
+            <Text style={styles.loadingText}>読み込み中...</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={news}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id.toString()}
+            ListHeaderComponent={ListHeader}
+            ListFooterComponent={ListFooter}
+            ListEmptyComponent={EmptyComponent}
+            onEndReached={handleLoadMore}
+            onEndReachedThreshold={0.3}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor="#e74c3c"
+                colors={['#e74c3c']}
+              />
+            }
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={news.length === 0 ? styles.emptyList : undefined}
+          />
+        )}
+      </ContentWrapper>
     </View>
   );
 }
@@ -252,9 +279,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f0f0f0',
   },
+  // Web用のラッパー
+  webWrapper: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: '#e8e8e8',
+  },
+  webContent: {
+    flex: 1,
+    width: '100%',
+    maxWidth: MAX_CONTENT_WIDTH,
+    backgroundColor: '#f0f0f0',
+    ...(isWeb ? { boxShadow: '0 0 20px rgba(0,0,0,0.1)' } : {}),
+  },
+  webHeaderInner: {
+    maxWidth: MAX_CONTENT_WIDTH,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  webCategoryWrapper: {
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  webCategoryInner: {
+    maxWidth: MAX_CONTENT_WIDTH,
+    width: '100%',
+  },
   header: {
     backgroundColor: '#1a1a2e',
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    paddingTop: Platform.OS === 'ios' ? 50 : Platform.OS === 'web' ? 16 : 30,
+  },
+  headerInner: {
+    width: '100%',
   },
   headerTop: {
     flexDirection: 'row',

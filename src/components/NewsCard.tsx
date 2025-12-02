@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Linking, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Linking, Image, Platform } from 'react-native';
 import { NewsItem } from '../types/news';
+
+const isWeb = Platform.OS === 'web';
 
 interface NewsCardProps {
   item: NewsItem;
@@ -182,18 +184,19 @@ const styles = StyleSheet.create({
   // トップニュースカード
   topCard: {
     backgroundColor: '#fff',
-    marginHorizontal: 12,
+    marginHorizontal: isWeb ? 0 : 12,
     marginVertical: 8,
-    borderRadius: 8,
+    borderRadius: isWeb ? 0 : 8,
     overflow: 'hidden',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+    ...(isWeb ? { cursor: 'pointer' } : {}),
   },
   topImageContainer: {
-    height: 180,
+    height: isWeb ? 220 : 180,
     position: 'relative',
     backgroundColor: '#f0f0f0',
   },
@@ -202,14 +205,14 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   topImagePlaceholder: {
-    height: 180,
+    height: isWeb ? 220 : 180,
     backgroundColor: '#1a1a2e',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
   },
   topImageIcon: {
-    fontSize: 60,
+    fontSize: isWeb ? 80 : 60,
   },
   categoryBadge: {
     position: 'absolute',
@@ -272,6 +275,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+    ...(isWeb ? { cursor: 'pointer', transition: 'background-color 0.2s' } : {}),
   },
   cardContent: {
     flex: 1,
