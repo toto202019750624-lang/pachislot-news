@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: '#e74c3c',
+    backgroundColor: '#1a1a2e',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   },
   inputFocused: {
     borderWidth: 2,
-    borderColor: '#c0392b',
+    borderColor: '#4285F4',
   },
   icon: {
     fontSize: 14,

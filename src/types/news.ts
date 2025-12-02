@@ -15,11 +15,12 @@ export interface NewsItem {
 // カテゴリ定義
 export const NEWS_CATEGORIES = [
   { id: 'all', label: '全て', icon: '📰' },
+  { id: 'matome', label: 'まとめ', icon: '📝' },
+  { id: 'kaiseki', label: '解析', icon: '📊' },
+  { id: 'youtube', label: 'YouTube', icon: '🎬' },
+  { id: 'event', label: 'イベント', icon: '🎪' },
   { id: 'maker', label: 'メーカー', icon: '🎰' },
   { id: 'industry', label: '業界', icon: '🏢' },
-  { id: 'kaiseki', label: '解析', icon: '📊' },
-  { id: 'matome', label: 'まとめ', icon: '📝' },
-  { id: 'youtube', label: 'YouTube', icon: '🎬' },
 ] as const;
 
 export type CategoryId = typeof NEWS_CATEGORIES[number]['id'];

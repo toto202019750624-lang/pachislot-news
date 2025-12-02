@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Linking, Image } from 'react-native';
 import { NewsItem } from '../types/news';
 
 interface NewsCardProps {
@@ -9,6 +9,7 @@ interface NewsCardProps {
 
 // カテゴリ別のアイコンと色
 const CATEGORY_STYLES: { [key: string]: { icon: string; bgColor: string } } = {
+  event: { icon: '🎪', bgColor: '#e91e63' },
   maker: { icon: '🎰', bgColor: '#e74c3c' },
   industry: { icon: '🏢', bgColor: '#3498db' },
   kaiseki: { icon: '📊', bgColor: '#9b59b6' },
@@ -18,10 +19,14 @@ const CATEGORY_STYLES: { [key: string]: { icon: string; bgColor: string } } = {
 
 export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) => {
   const categoryStyle = CATEGORY_STYLES[item.category] || CATEGORY_STYLES.industry;
+  const [imageError, setImageError] = useState(false);
   
   const handlePress = () => {
     Linking.openURL(item.url);
   };
+
+  // 画像URLが有効かどうか
+  const hasValidImage = item.image_url && !imageError;
 
   // 日付を西暦から表示（例: 2025/11/29）
   const formatDate = (dateString: string | null) => {
@@ -62,22 +67,48 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
         onPress={handlePress}
         activeOpacity={0.7}
       >
-        <View style={[styles.topImagePlaceholder, { backgroundColor: categoryStyle.bgColor }]}>
-          <Text style={styles.topImageIcon}>{categoryStyle.icon}</Text>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryBadgeText}>
-              {item.category === 'maker' ? 'メーカー' :
-               item.category === 'kaiseki' ? '解析' :
-               item.category === 'matome' ? 'まとめ' :
-               item.category === 'youtube' ? 'YouTube' : '業界'}
-            </Text>
-          </View>
-          {showNewBadge && (
-            <View style={styles.newBadgeTop}>
-              <Text style={styles.newBadgeTopText}>NEW</Text>
+        {hasValidImage ? (
+          <View style={styles.topImageContainer}>
+            <Image
+              source={{ uri: item.image_url! }}
+              style={styles.topImage}
+              resizeMode="cover"
+              onError={() => setImageError(true)}
+            />
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryBadgeText}>
+                {item.category === 'event' ? 'イベント' :
+                 item.category === 'maker' ? 'メーカー' :
+                 item.category === 'kaiseki' ? '解析' :
+                 item.category === 'matome' ? 'まとめ' :
+                 item.category === 'youtube' ? 'YouTube' : '業界'}
+              </Text>
             </View>
-          )}
-        </View>
+            {showNewBadge && (
+              <View style={styles.newBadgeTop}>
+                <Text style={styles.newBadgeTopText}>NEW</Text>
+              </View>
+            )}
+          </View>
+        ) : (
+          <View style={[styles.topImagePlaceholder, { backgroundColor: categoryStyle.bgColor }]}>
+            <Text style={styles.topImageIcon}>{categoryStyle.icon}</Text>
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryBadgeText}>
+                {item.category === 'event' ? 'イベント' :
+                 item.category === 'maker' ? 'メーカー' :
+                 item.category === 'kaiseki' ? '解析' :
+                 item.category === 'matome' ? 'まとめ' :
+                 item.category === 'youtube' ? 'YouTube' : '業界'}
+              </Text>
+            </View>
+            {showNewBadge && (
+              <View style={styles.newBadgeTop}>
+                <Text style={styles.newBadgeTopText}>NEW</Text>
+              </View>
+            )}
+          </View>
+        )}
         <View style={styles.topContent}>
           <Text style={styles.topTitle} numberOfLines={2}>{item.title}</Text>
           <View style={styles.topMeta}>
@@ -160,6 +191,15 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+  },
+  topImageContainer: {
+    height: 180,
+    position: 'relative',
+    backgroundColor: '#f0f0f0',
+  },
+  topImage: {
+    width: '100%',
+    height: '100%',
   },
   topImagePlaceholder: {
     height: 180,

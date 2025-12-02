@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import { NewsCard, CategoryTabs, SearchBar } from './src/components';
+import { NewsCard, CategoryTabs, SearchBar, AnimatedLogo } from './src/components';
 import { getNews, searchNews, getLastUpdatedTime } from './src/services/supabase';
 import { NewsItem, CategoryId } from './src/types/news';
 
@@ -198,15 +198,12 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#e74c3c" />
+      <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
       
       {/* ヘッダー */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <View style={styles.logoContainer}>
-            <Text style={styles.logoIcon}>🎰</Text>
-            <Text style={styles.logoText}>パチスロニュース</Text>
-          </View>
+          <AnimatedLogo />
           <Text style={styles.headerTime}>{timeString} 更新</Text>
         </View>
         <SearchBar onSearch={(kw) => handleSearch(kw, true)} onClear={handleClearSearch} />
@@ -256,7 +253,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
   },
   header: {
-    backgroundColor: '#e74c3c',
+    backgroundColor: '#1a1a2e',
     paddingTop: Platform.OS === 'ios' ? 50 : 30,
   },
   headerTop: {

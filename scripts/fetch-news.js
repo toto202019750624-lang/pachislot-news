@@ -8,6 +8,7 @@
 
 const Parser = require('rss-parser');
 const { createClient } = require('@supabase/supabase-js');
+const cheerio = require('cheerio');
 
 // SSL証明書エラーを無視（まとめサイトの証明書が期限切れの場合）
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
@@ -35,6 +36,15 @@ const SEARCH_QUERIES = [
   'パチンコホール',
 ];
 
+// イベント関連の検索キーワード
+const EVENT_SEARCH_QUERIES = [
+  'パチンコ 来店',
+  'パチスロ 来店',
+  'パチンコ ライター 来店',
+  'パチスロ 取材',
+  'パチンコ イベント',
+];
+
 // まとめサイトのRSSフィード
 const MATOME_RSS_FEEDS = [
   { url: 'https://pachinkopachisro.com/index.rdf', name: 'パチンコ・パチスロ.com' },
@@ -51,7 +61,16 @@ const KAISEKI_RSS_FEEDS = [
 // カテゴリ判定キーワード
 // メーカー = 新台 + メーカー情報
 // 業界 = 業界 + 規制 + ホール
+// イベント = 来店 + 取材 + イベント
 const CATEGORY_KEYWORDS = {
+  event: [
+    // 来店・イベント関連（優先度高）
+    '来店', '取材', 'イベント', '実践', '収録', 'ライター', '本人来店',
+    '並び', '抽選', '整理券', '特定日', '旧イベ', '新装', 'リニューアル',
+    // 有名ライター名
+    'シバター', 'ヒカル', '諸積', 'いそまる', 'よしき', 'じゃんじゃん',
+    '日直島田', '1GAME', 'スロパチ', 'セブンズ'
+  ],
   maker: [
     // 新台関連
     '新台', '導入', 'スペック', '機種', '登場', '発売', 'デビュー', '導入開始',
@@ -212,6 +231,92 @@ function removeDuplicateTitles(newsItems, threshold = 0.9) {
   return uniqueNews;
 }
 
+// OGP画像を取得
+async function fetchOgpImage(url, timeout = 5000) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'ja,en-US;q=0.7,en;q=0.3',
+      },
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) return null;
+    
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    
+    // OGP画像を探す（優先順位順）
+    const ogImage = $('meta[property="og:image"]').attr('content') ||
+                    $('meta[name="og:image"]').attr('content') ||
+                    $('meta[property="twitter:image"]').attr('content') ||
+                    $('meta[name="twitter:image"]').attr('content') ||
+                    $('meta[name="twitter:image:src"]').attr('content');
+    
+    if (ogImage) {
+      // 相対URLを絶対URLに変換
+      if (ogImage.startsWith('//')) {
+        return 'https:' + ogImage;
+      } else if (ogImage.startsWith('/')) {
+        const urlObj = new URL(url);
+        return urlObj.origin + ogImage;
+      }
+      return ogImage;
+    }
+    
+    return null;
+  } catch (error) {
+    // タイムアウトやネットワークエラーは無視
+    return null;
+  }
+}
+
+// 複数のニュースのOGP画像を並列で取得
+async function fetchOgpImagesForNews(newsItems, maxConcurrent = 5) {
+  console.log(`\n🖼️ OGP画像を取得中...`);
+  
+  let fetchedCount = 0;
+  const results = [];
+  
+  // バッチ処理で並列実行
+  for (let i = 0; i < newsItems.length; i += maxConcurrent) {
+    const batch = newsItems.slice(i, i + maxConcurrent);
+    
+    const batchResults = await Promise.all(
+      batch.map(async (item) => {
+        // YouTubeは既にサムネイルがあるのでスキップ
+        if (item.category === 'youtube' && item.image_url) {
+          return item;
+        }
+        
+        const imageUrl = await fetchOgpImage(item.url);
+        if (imageUrl) {
+          fetchedCount++;
+          return { ...item, image_url: imageUrl };
+        }
+        return item;
+      })
+    );
+    
+    results.push(...batchResults);
+    
+    // 進捗表示
+    if ((i + maxConcurrent) % 20 === 0 || i + maxConcurrent >= newsItems.length) {
+      console.log(`  処理中: ${Math.min(i + maxConcurrent, newsItems.length)}/${newsItems.length}件`);
+    }
+  }
+  
+  console.log(`  ✅ OGP画像取得: ${fetchedCount}件`);
+  return results;
+}
+
 // Google News RSSからニュースを取得
 async function fetchGoogleNews(query) {
   const encodedQuery = encodeURIComponent(query);
@@ -353,6 +458,24 @@ async function fetchAllNews() {
     // レート制限を避けるため少し待機
     await new Promise(resolve => setTimeout(resolve, 500));
   }
+
+  // イベント関連ニュースを取得
+  console.log('\n🎪 イベント関連ニュースを取得中...\n');
+  for (const query of EVENT_SEARCH_QUERIES) {
+    const news = await fetchGoogleNews(query);
+    
+    // URL重複を除去し、カテゴリをeventに設定
+    for (const item of news) {
+      if (!seenUrls.has(item.url)) {
+        seenUrls.add(item.url);
+        // イベント検索で取得したものはeventカテゴリに
+        item.category = 'event';
+        allNews.push(item);
+      }
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
   
   // まとめサイトから取得
   console.log('\n📝 まとめサイトからニュースを取得中...\n');
@@ -417,28 +540,6 @@ async function saveNews(newsItems) {
   return { savedCount, skippedCount, errorCount };
 }
 
-// 古いニュースを削除（30日以上前）
-async function cleanupOldNews() {
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  
-  try {
-    const { error, count } = await supabase
-      .from('news')
-      .delete()
-      .lt('fetched_at', thirtyDaysAgo.toISOString());
-    
-    if (error) {
-      console.error('古いニュースの削除エラー:', error.message);
-      return 0;
-    }
-    return count || 0;
-  } catch (err) {
-    console.error('クリーンアップエラー:', err.message);
-    return 0;
-  }
-}
-
 // メイン処理
 async function main() {
   console.log('='.repeat(60));
@@ -464,7 +565,7 @@ async function main() {
     });
     console.log('\n📊 カテゴリ別内訳:');
     Object.entries(categoryCount).forEach(([cat, count]) => {
-      const icons = { maker: '🎰', industry: '🏢', matome: '📝', kaiseki: '📊' };
+      const icons = { maker: '🎰', industry: '🏢', matome: '📝', kaiseki: '📊', event: '🎪' };
       console.log(`  ${icons[cat] || '📰'} ${cat}: ${count}件`);
     });
 
@@ -481,13 +582,12 @@ async function main() {
         console.log(`  ${src}: ${count}件`);
       });
 
+    // OGP画像を取得（新規ニュースのみ）
+    const newsWithImages = await fetchOgpImagesForNews(news);
+
     // Supabaseに保存
     console.log('\n💾 Supabaseに保存中...');
-    const { savedCount, skippedCount, errorCount } = await saveNews(news);
-
-    // 古いニュースをクリーンアップ
-    console.log('\n🧹 古いニュースをクリーンアップ中...');
-    const deletedCount = await cleanupOldNews();
+    const { savedCount, skippedCount, errorCount } = await saveNews(newsWithImages);
 
     // 結果サマリー
     console.log('\n' + '='.repeat(60));
@@ -496,7 +596,6 @@ async function main() {
     console.log(`  ✅ 新規保存: ${savedCount}件`);
     console.log(`  ⏭️ スキップ（重複）: ${skippedCount}件`);
     console.log(`  ❌ エラー: ${errorCount}件`);
-    console.log(`  🗑️ 削除（30日以上前）: ${deletedCount}件`);
     console.log('='.repeat(60));
 
     // 最新のニュースを表示
