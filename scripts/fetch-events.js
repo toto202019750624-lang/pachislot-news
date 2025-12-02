@@ -134,84 +134,90 @@ async function fetchPWorldEvents() {
   
   // ========================================
   // パターン2: メインリスト（各ホールの取材・来店情報）
-  // h3にホール名、その下に来店/取材情報
+  // 「来店 xxx PR 12/02(火)」または「取材 xxx PR 12/02(火)」形式のリンク
   // ========================================
   console.log('  📋 メインリストを解析中...');
   
   let mainListCount = 0;
   
-  // h3タグからホール名を取得し、その周辺から来店/取材情報を探す
-  $('h3').each((index, h3) => {
-    const $h3 = $(h3);
-    const hallName = $h3.text().trim();
+  // 全てのリンクから来店/取材情報を探す
+  $('a').each((index, link) => {
+    const $link = $(link);
+    const linkText = $link.text().trim();
+    const href = $link.attr('href') || '';
     
-    // ホール名が短すぎる場合はスキップ
-    if (hallName.length < 3) return;
-    
-    // ホールのURLを取得
-    const $hallLink = $h3.find('a').first();
-    let hallUrl = $hallLink.attr('href') || '';
-    if (hallUrl.startsWith('//')) hallUrl = 'https:' + hallUrl;
-    
-    // 親要素から来店/取材情報を探す
-    const $parent = $h3.closest('div').parent();
-    const parentText = $parent.text();
-    
-    // 来店/取材リンクを探す
-    $parent.find('a').each((i, eventLink) => {
-      const $eventLink = $(eventLink);
-      const eventText = $eventLink.text().trim();
+    // 「来店」または「取材」で始まり、PRと日付を含むリンク
+    // 例: "来店 あんチャーンさん来店予定！！ PR 12/02(火)"
+    // 例: "取材 三角関係(ラブトライアングル) PR 12/02(火)09:00〜23:00"
+    if ((linkText.startsWith('来店') || linkText.startsWith('取材')) && 
+        linkText.includes('PR') && 
+        linkText.match(/\d{1,2}\/\d{1,2}/)) {
       
-      // 「来店」または「取材」で始まるリンクを探す
-      if (eventText.startsWith('来店') || eventText.startsWith('取材')) {
-        const eventType = eventText.startsWith('来店') ? '来店' : '取材';
-        
-        // 日付を抽出
-        const dateMatch = eventText.match(/(\d{1,2}\/\d{1,2})/);
-        const dateStr = dateMatch ? dateMatch[1] : '';
-        const eventDate = parseEventDate(dateStr);
-        
-        // イベント詳細を抽出（来店者名や取材名）
-        let eventDetail = eventText
-          .replace(/^(来店|取材)\s*/, '')
-          .replace(/PR\s*$/, '')
-          .replace(/\d{1,2}\/\d{1,2}\([日月火水木金土]\)\d{0,2}:?\d{0,2}[〜~]?\d{0,2}:?\d{0,2}\s*/, '')
-          .trim();
-        
-        // 詳細が長すぎる場合は切り詰め
-        if (eventDetail.length > 50) {
-          eventDetail = eventDetail.substring(0, 50);
-        }
-        
-        const uniqueKey = `${hallName}_${dateStr}_${eventType}`;
-        
-        if (!seenKeys.has(uniqueKey) && hallName.length > 2) {
-          seenKeys.add(uniqueKey);
-          mainListCount++;
-          
-          // タイトルを作成
-          let title = `【${eventType}】${hallName}`;
-          if (eventDetail && eventDetail.length > 2 && !eventDetail.includes('PR')) {
-            title += ` - ${eventDetail}`;
-          }
-          if (dateStr) {
-            title += ` (${dateStr})`;
-          }
-          
-          // 100文字以内に制限
-          title = title.substring(0, 100);
-          
-          events.push({
-            title: title,
-            url: hallUrl || `https://www.p-world.co.jp/hall/interviews/prefs`,
-            source: 'P-WORLD',
-            category: 'event',
-            published_at: eventDate,
-            summary: eventText.substring(0, 200),
-          });
-        }
+      const eventType = linkText.startsWith('来店') ? '来店' : '取材';
+      
+      // 日付を抽出
+      const dateMatch = linkText.match(/(\d{1,2}\/\d{1,2})/);
+      const dateStr = dateMatch ? dateMatch[1] : '';
+      const eventDate = parseEventDate(dateStr);
+      
+      // イベント詳細を抽出（「来店/取材」と「PR」の間の部分）
+      let eventDetail = linkText
+        .replace(/^(来店|取材)\s*/, '')
+        .replace(/\s*PR\s*\d{1,2}\/\d{1,2}.*$/, '')
+        .trim();
+      
+      // 詳細が長すぎる場合は切り詰め
+      if (eventDetail.length > 40) {
+        eventDetail = eventDetail.substring(0, 40) + '...';
       }
-    });
+      
+      // 親要素からホール名を探す（h3タグ）
+      let hallName = '';
+      const $container = $link.closest('div').parent().parent();
+      const $h3 = $container.find('h3').first();
+      if ($h3.length > 0) {
+        hallName = $h3.text().trim();
+      }
+      
+      // ホール名が見つからない場合はスキップ
+      if (!hallName || hallName.length < 3) return;
+      
+      // ホールのURLを取得
+      let hallUrl = '';
+      const $hallLink = $h3.find('a').first();
+      if ($hallLink.length > 0) {
+        hallUrl = $hallLink.attr('href') || '';
+        if (hallUrl.startsWith('//')) hallUrl = 'https:' + hallUrl;
+      }
+      
+      const uniqueKey = `${hallName}_${dateStr}_${eventType}_${eventDetail.substring(0, 20)}`;
+      
+      if (!seenKeys.has(uniqueKey)) {
+        seenKeys.add(uniqueKey);
+        mainListCount++;
+        
+        // タイトルを作成
+        let title = `【${eventType}】${hallName}`;
+        if (eventDetail && eventDetail.length > 2) {
+          title += ` - ${eventDetail}`;
+        }
+        if (dateStr) {
+          title += ` (${dateStr})`;
+        }
+        
+        // 100文字以内に制限
+        title = title.substring(0, 100);
+        
+        events.push({
+          title: title,
+          url: hallUrl || `https://www.p-world.co.jp/hall/interviews/prefs`,
+          source: 'P-WORLD',
+          category: 'event',
+          published_at: eventDate,
+          summary: linkText.substring(0, 200),
+        });
+      }
+    }
   });
   
   console.log(`    → メインリスト: ${mainListCount}件`);
