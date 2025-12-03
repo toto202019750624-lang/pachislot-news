@@ -15,7 +15,7 @@ import { NewsCard, CategoryTabs, SearchBar, AnimatedLogo } from './src/component
 import { getNews, searchNews, getLastUpdatedTime } from './src/services/supabase';
 import { NewsItem, CategoryId } from './src/types/news';
 
-const PAGE_SIZE = 120;
+const PAGE_SIZE = 200;
 
 // Web用の最大幅
 const MAX_CONTENT_WIDTH = 680;
