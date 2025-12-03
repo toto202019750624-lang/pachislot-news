@@ -120,4 +120,58 @@ export const getLastUpdatedTime = async (): Promise<string | null> => {
   }
 };
 
+// アクセス数を取得してインクリメント
+export const incrementAccessCount = async (): Promise<number> => {
+  try {
+    // 現在のアクセス数を取得
+    const { data: currentData, error: fetchError } = await supabase
+      .from('site_stats')
+      .select('value')
+      .eq('stat_name', 'access_count')
+      .single();
 
+    if (fetchError) {
+      console.error('アクセス数取得エラー:', fetchError.message);
+      return 0;
+    }
+
+    const newCount = (currentData?.value || 0) + 1;
+
+    // アクセス数をインクリメント
+    const { error: updateError } = await supabase
+      .from('site_stats')
+      .update({ value: newCount, updated_at: new Date().toISOString() })
+      .eq('stat_name', 'access_count');
+
+    if (updateError) {
+      console.error('アクセス数更新エラー:', updateError.message);
+      return currentData?.value || 0;
+    }
+
+    return newCount;
+  } catch (error) {
+    console.error('アクセスカウンターエラー:', error);
+    return 0;
+  }
+};
+
+// アクセス数を取得（インクリメントなし）
+export const getAccessCount = async (): Promise<number> => {
+  try {
+    const { data, error } = await supabase
+      .from('site_stats')
+      .select('value')
+      .eq('stat_name', 'access_count')
+      .single();
+
+    if (error) {
+      console.error('アクセス数取得エラー:', error.message);
+      return 0;
+    }
+
+    return data?.value || 0;
+  } catch (error) {
+    console.error('アクセスカウンターエラー:', error);
+    return 0;
+  }
+};

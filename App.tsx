@@ -12,7 +12,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { NewsCard, CategoryTabs, SearchBar, AnimatedLogo } from './src/components';
-import { getNews, searchNews, getLastUpdatedTime } from './src/services/supabase';
+import { getNews, searchNews, getLastUpdatedTime, incrementAccessCount } from './src/services/supabase';
 import { NewsItem, CategoryId } from './src/types/news';
 
 const PAGE_SIZE = 200;
@@ -35,6 +35,7 @@ export default function App() {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [totalCount, setTotalCount] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [accessCount, setAccessCount] = useState<number>(0);
 
   // ニュースを取得
   const fetchNews = useCallback(async (category?: CategoryId, reset: boolean = true) => {
@@ -75,10 +76,17 @@ export default function App() {
     setLastUpdated(time);
   }, []);
 
+  // アクセス数をインクリメント
+  const fetchAccessCount = useCallback(async () => {
+    const count = await incrementAccessCount();
+    setAccessCount(count);
+  }, []);
+
   // 初回読み込み
   useEffect(() => {
     fetchNews();
     fetchLastUpdated();
+    fetchAccessCount();
   }, []);
 
   // カテゴリ変更時
@@ -245,7 +253,10 @@ export default function App() {
         <View style={[styles.headerInner, isWeb && styles.webHeaderInner]}>
           <View style={styles.headerTop}>
             <AnimatedLogo />
-            <Text style={styles.headerTime}>{timeString} 更新</Text>
+            <View style={styles.headerStats}>
+              <Text style={styles.headerTime}>{timeString} 更新</Text>
+              <Text style={styles.accessCount}>👀 {accessCount.toLocaleString()} views</Text>
+            </View>
           </View>
           <SearchBar onSearch={(kw) => handleSearch(kw, true)} onClear={handleClearSearch} />
         </View>
@@ -365,9 +376,17 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
+  headerStats: {
+    alignItems: 'flex-end',
+  },
   headerTime: {
     fontSize: 11,
     color: 'rgba(255,255,255,0.8)',
+  },
+  accessCount: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 2,
   },
   loadingContainer: {
     flex: 1,
