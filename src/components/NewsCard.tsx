@@ -24,7 +24,19 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
   const [imageError, setImageError] = useState(false);
   
   const handlePress = () => {
-    Linking.openURL(item.url);
+    // URLが空でないことを確認
+    if (!item.url) {
+      console.error('URL is empty');
+      return;
+    }
+    
+    // Web版の場合は window.open を使用（より確実）
+    if (isWeb && typeof window !== 'undefined') {
+      window.open(item.url, '_blank', 'noopener,noreferrer');
+    } else {
+      // モバイル版は Linking を使用
+      Linking.openURL(item.url);
+    }
   };
 
   // 画像URLが有効かどうか
@@ -166,7 +178,13 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
 // コンパクトなニュースアイテム
 export const NewsItemCompact: React.FC<{ item: NewsItem; index: number }> = ({ item, index }) => {
   const handlePress = () => {
-    Linking.openURL(item.url);
+    if (!item.url) return;
+    
+    if (isWeb && typeof window !== 'undefined') {
+      window.open(item.url, '_blank', 'noopener,noreferrer');
+    } else {
+      Linking.openURL(item.url);
+    }
   };
 
   return (
