@@ -75,11 +75,19 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
 
   // トップニュース用の大きいカード
   if (isTopNews) {
+    // Web版では<a>タグとして動作するようにする
+    const linkProps = isWeb ? {
+      accessibilityRole: 'link' as const,
+      href: item.url,
+      hrefAttrs: { target: '_blank', rel: 'noopener noreferrer' },
+    } : {};
+    
     return (
       <TouchableOpacity 
         style={styles.topCard} 
         onPress={handlePress}
         activeOpacity={0.7}
+        {...linkProps}
       >
         {hasValidImage ? (
           <View style={styles.topImageContainer}>
@@ -135,11 +143,19 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
   }
 
   // 通常のニュースカード（サムネなし）
+  // Web版では<a>タグとして動作するようにする
+  const linkProps = isWeb ? {
+    accessibilityRole: 'link' as const,
+    href: item.url,
+    hrefAttrs: { target: '_blank', rel: 'noopener noreferrer' },
+  } : {};
+  
   return (
     <TouchableOpacity 
       style={styles.card} 
       onPress={handlePress}
       activeOpacity={0.7}
+      {...linkProps}
     >
       <View style={styles.cardContent}>
         <View style={styles.titleRow}>
@@ -187,11 +203,19 @@ export const NewsItemCompact: React.FC<{ item: NewsItem; index: number }> = ({ i
     }
   };
 
+  // Web版では<a>タグとして動作するようにする
+  const linkProps = isWeb ? {
+    accessibilityRole: 'link' as const,
+    href: item.url,
+    hrefAttrs: { target: '_blank', rel: 'noopener noreferrer' },
+  } : {};
+
   return (
     <TouchableOpacity 
       style={styles.compactCard} 
       onPress={handlePress}
       activeOpacity={0.7}
+      {...linkProps}
     >
       <Text style={styles.compactNumber}>{index + 1}</Text>
       <Text style={styles.compactTitle} numberOfLines={1}>{item.title}</Text>
