@@ -203,8 +203,8 @@ function calculateSimilarity(title1, title2) {
   return intersection / union;
 }
 
-// 重複タイトルを除去（90%以上類似したものを除去）
-function removeDuplicateTitles(newsItems, threshold = 0.9) {
+// 重複タイトルを除去（98%以上類似したものを除去）
+function removeDuplicateTitles(newsItems, threshold = 0.98) {
   const uniqueNews = [];
   let duplicateCount = 0;
   
