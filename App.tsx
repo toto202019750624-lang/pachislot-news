@@ -164,6 +164,7 @@ export default function App() {
   );
 
   // フッターコンポーネント（ローディング表示）
+  // フッターコンポーネント（ローディング表示 & さらに読み込むボタン）
   const ListFooter = () => {
     if (!hasMore) {
       return (
@@ -183,7 +184,13 @@ export default function App() {
       );
     }
     
-    return null;
+    return (
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.loadMoreButton} onPress={handleLoadMore}>
+          <Text style={styles.loadMoreButtonText}>さらに読み込む</Text>
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   // 空の状態
@@ -255,8 +262,6 @@ export default function App() {
             ListHeaderComponent={ListHeader}
             ListFooterComponent={ListFooter}
             ListEmptyComponent={EmptyComponent}
-            onEndReached={handleLoadMore}
-            onEndReachedThreshold={0.3}
             refreshControl={
               // Web版ではプルダウン更新を無効化して、
               // 意図しない再読み込みによるスクロールリセットを防ぐ
@@ -419,5 +424,17 @@ const styles = StyleSheet.create({
   footerSubText: {
     fontSize: 12,
     color: '#999',
+  },
+  loadMoreButton: {
+    marginTop: 4,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: '#e74c3c',
+  },
+  loadMoreButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 'bold',
   },
 });
