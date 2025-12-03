@@ -258,12 +258,18 @@ export default function App() {
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.3}
             refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                tintColor="#e74c3c"
-                colors={['#e74c3c']}
-              />
+              // Web版ではプルダウン更新を無効化して、
+              // 意図しない再読み込みによるスクロールリセットを防ぐ
+              isWeb
+                ? undefined
+                : (
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={handleRefresh}
+                    tintColor="#e74c3c"
+                    colors={['#e74c3c']}
+                  />
+                )
             }
             showsVerticalScrollIndicator={false}
             contentContainerStyle={news.length === 0 ? styles.emptyList : undefined}
