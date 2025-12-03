@@ -444,12 +444,14 @@ async function fetchChonboristaNews() {
             parseInt(dateParts[2])
           ).toISOString();
           
-          // 絶対URLに変換
-          const fullUrl = url.startsWith('http') ? url : `https://chonborista.com${url.startsWith('/') ? '' : '/'}${url}`;
+          // 絶対URLに変換（更新日をパラメータとして追加して、同じ機種の別更新を区別）
+          const baseUrl = url.startsWith('http') ? url : `https://chonborista.com${url.startsWith('/') ? '' : '/'}${url}`;
+          const dateParam = dateMatch[1].replace(/\//g, '');
+          const fullUrl = `${baseUrl}?updated=${dateParam}`;
           
           news.push({
             title: title,
-            url: fullUrl,
+            url: fullUrl, // 更新日パラメータ付きで保存（重複回避）
             source: 'ちょんぼりすた',
             category: 'kaiseki',
             published_at: publishedAt,
