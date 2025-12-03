@@ -1,5 +1,5 @@
-- import React, { useState, useEffect, useCallback } from 'react';
-+ import React, { useState, useEffect, useCallback, useRef } from 'react';import {
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
   StyleSheet,
   View,
   Text,
@@ -22,10 +22,9 @@ const MAX_CONTENT_WIDTH = 680;
 const isWeb = Platform.OS === 'web';
 
 export default function App() {
-    +  const listRef = useRef<FlatList<NewsItem> | null>(null);
-    +  const scrollOffsetRef = useRef(0);
-      const [news, setNews] = useState<NewsItem[]>([]);
-      // 以下そのまま…
+  const listRef = useRef<FlatList<NewsItem> | null>(null);
+  const scrollOffsetRef = useRef(0);
+  
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -47,17 +46,18 @@ export default function App() {
         setNews(result.data);
       } else {
         setNews(prev => [...prev, ...result.data]);
-                // ★ ここを追加：追加時にスクロール位置を維持
-                requestAnimationFrame(() => {
-                  if (listRef.current) {
-                    listRef.current.scrollToOffset({
-                      offset: scrollOffsetRef.current,
-                      animated: false,
-                    });
-                  }
-                });
-              }
+
+        // 追加時にスクロール位置を維持
+        requestAnimationFrame(() => {
+          if (listRef.current) {
+            listRef.current.scrollToOffset({
+              offset: scrollOffsetRef.current,
+              animated: false,
+            });
+          }
+        });
       }
+
       setHasMore(result.hasMore);
       setTotalCount(prev => reset ? result.data.length : prev + result.data.length);
     } catch (error) {
@@ -270,6 +270,7 @@ export default function App() {
           </View>
         ) : (
           <FlatList
+            ref={listRef}
             data={news}
             renderItem={renderItem}
             keyExtractor={(item) => item.id.toString()}
@@ -277,10 +278,10 @@ export default function App() {
             ListFooterComponent={ListFooter}
             ListEmptyComponent={EmptyComponent}
             onScroll={(e) => {
-              +             // 現在のスクロール位置を保存
-              +             scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
-              +           }}
-              +           scrollEventThrottle={16}
+              // 現在のスクロール位置を保存
+              scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
+            }}
+            scrollEventThrottle={16}
             refreshControl={
               // Web版ではプルダウン更新を無効化して、
               // 意図しない再読み込みによるスクロールリセットを防ぐ
