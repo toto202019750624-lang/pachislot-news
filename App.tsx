@@ -18,7 +18,7 @@ import { NewsItem, CategoryId } from './src/types/news';
 const PAGE_SIZE = 200;
 
 // Web用の最大幅
-const MAX_CONTENT_WIDTH = 680;
+const MAX_CONTENT_WIDTH = 782; // 680pxから15%増加
 const isWeb = Platform.OS === 'web';
 
 export default function App() {

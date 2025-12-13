@@ -25,8 +25,8 @@ export const getNews = async (
     if (category && category !== 'all') {
       query = query.eq('category', category);
     } else if (category === 'all' || !category) {
-      // 「全て」の場合はイベントカテゴリを除外
-      query = query.neq('category', 'event');
+      // 「全て」の場合はイベントとまとめカテゴリを除外
+      query = query.neq('category', 'event').neq('category', 'matome');
     }
 
     if (source) {
