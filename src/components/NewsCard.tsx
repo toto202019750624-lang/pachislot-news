@@ -22,14 +22,14 @@ const CATEGORY_STYLES: { [key: string]: { icon: string; bgColor: string } } = {
 export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) => {
   const categoryStyle = CATEGORY_STYLES[item.category] || CATEGORY_STYLES.industry;
   const [imageError, setImageError] = useState(false);
-  
+
   const handlePress = () => {
     // URLが空でないことを確認
     if (!item.url) {
       console.error('URL is empty');
       return;
     }
-    
+
     // Web版の場合は window.open を使用（より確実）
     if (isWeb && typeof window !== 'undefined') {
       window.open(item.url, '_blank', 'noopener,noreferrer');
@@ -81,10 +81,10 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
       href: item.url,
       hrefAttrs: { target: '_blank', rel: 'noopener noreferrer' },
     } : {};
-    
+
     return (
-      <TouchableOpacity 
-        style={styles.topCard} 
+      <TouchableOpacity
+        style={styles.topCard}
         onPress={handlePress}
         activeOpacity={0.7}
         {...linkProps}
@@ -100,10 +100,10 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
             <View style={styles.categoryBadge}>
               <Text style={styles.categoryBadgeText}>
                 {item.category === 'event' ? 'イベント' :
-                 item.category === 'maker' ? 'メーカー' :
-                 item.category === 'kaiseki' ? '解析' :
-                 item.category === 'matome' ? 'まとめ' :
-                 item.category === 'youtube' ? 'YouTube' : '業界'}
+                  item.category === 'maker' ? 'メーカー' :
+                    item.category === 'kaiseki' ? '解析' :
+                      item.category === 'matome' ? 'まとめ' :
+                        item.category === 'youtube' ? 'YouTube' : '業界'}
               </Text>
             </View>
             {showNewBadge && (
@@ -118,10 +118,10 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
             <View style={styles.categoryBadge}>
               <Text style={styles.categoryBadgeText}>
                 {item.category === 'event' ? 'イベント' :
-                 item.category === 'maker' ? 'メーカー' :
-                 item.category === 'kaiseki' ? '解析' :
-                 item.category === 'matome' ? 'まとめ' :
-                 item.category === 'youtube' ? 'YouTube' : '業界'}
+                  item.category === 'maker' ? 'メーカー' :
+                    item.category === 'kaiseki' ? '解析' :
+                      item.category === 'matome' ? 'まとめ' :
+                        item.category === 'youtube' ? 'YouTube' : '業界'}
               </Text>
             </View>
             {showNewBadge && (
@@ -149,10 +149,10 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
     href: item.url,
     hrefAttrs: { target: '_blank', rel: 'noopener noreferrer' },
   } : {};
-  
+
   return (
-    <TouchableOpacity 
-      style={styles.card} 
+    <TouchableOpacity
+      style={styles.card}
       onPress={handlePress}
       activeOpacity={0.7}
       {...linkProps}
@@ -170,10 +170,10 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
           <View style={[styles.categoryTag, { backgroundColor: categoryStyle.bgColor }]}>
             <Text style={styles.categoryTagText}>
               {item.category === 'event' ? 'イベント' :
-               item.category === 'maker' ? 'メーカー' :
-               item.category === 'kaiseki' ? '解析' :
-               item.category === 'matome' ? 'まとめ' :
-               item.category === 'youtube' ? 'YouTube' : '業界'}
+                item.category === 'maker' ? 'メーカー' :
+                  item.category === 'kaiseki' ? '解析' :
+                    item.category === 'matome' ? 'まとめ' :
+                      item.category === 'youtube' ? 'YouTube' : '業界'}
             </Text>
           </View>
           <Text style={styles.source}>{item.source}</Text>
@@ -183,6 +183,12 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
             <>
               <Text style={styles.separator}>•</Text>
               <Text style={styles.viewCount}>▶ {formatViewCount(item.view_count)}</Text>
+            </>
+          )}
+          {item.category === 'matome' && item.view_count && item.view_count > 0 && (
+            <>
+              <Text style={styles.separator}>•</Text>
+              <Text style={styles.bookmarkCount}>🔖 {item.view_count}users</Text>
             </>
           )}
         </View>
@@ -195,7 +201,7 @@ export const NewsCard: React.FC<NewsCardProps> = ({ item, isTopNews = false }) =
 export const NewsItemCompact: React.FC<{ item: NewsItem; index: number }> = ({ item, index }) => {
   const handlePress = () => {
     if (!item.url) return;
-    
+
     if (isWeb && typeof window !== 'undefined') {
       window.open(item.url, '_blank', 'noopener,noreferrer');
     } else {
@@ -211,8 +217,8 @@ export const NewsItemCompact: React.FC<{ item: NewsItem; index: number }> = ({ i
   } : {};
 
   return (
-    <TouchableOpacity 
-      style={styles.compactCard} 
+    <TouchableOpacity
+      style={styles.compactCard}
       onPress={handlePress}
       activeOpacity={0.7}
       {...linkProps}
@@ -364,6 +370,11 @@ const styles = StyleSheet.create({
   viewCount: {
     fontSize: 11,
     color: '#ff0000',
+    fontWeight: '600',
+  },
+  bookmarkCount: {
+    fontSize: 11,
+    color: '#ff6b00',
     fontWeight: '600',
   },
   categoryTag: {

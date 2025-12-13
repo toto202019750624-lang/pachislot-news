@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
 } from 'react-native';
-import { NewsCard, CategoryTabs, SearchBar, AnimatedLogo } from './src/components';
+import { NewsCard, CategoryTabs, SearchBar, AnimatedLogo, YouTubeAnalytics, EventAnalytics } from './src/components';
 import { getNews, searchNews, getLastUpdatedTime, incrementAccessCount } from './src/services/supabase';
 import { NewsItem, CategoryId } from './src/types/news';
 
@@ -24,7 +24,7 @@ const isWeb = Platform.OS === 'web';
 export default function App() {
   const listRef = useRef<FlatList<NewsItem> | null>(null);
   const scrollOffsetRef = useRef(0);
-  
+
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,13 +36,15 @@ export default function App() {
   const [totalCount, setTotalCount] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [accessCount, setAccessCount] = useState<number>(0);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showEventAnalytics, setShowEventAnalytics] = useState(false);
 
   // ニュースを取得
   const fetchNews = useCallback(async (category?: CategoryId, reset: boolean = true) => {
     try {
       const offset = reset ? 0 : news.length;
       const result = await getNews(category, undefined, PAGE_SIZE, offset);
-      
+
       if (reset) {
         setNews(result.data);
       } else {
@@ -96,6 +98,8 @@ export default function App() {
     setIsSearching(false);
     setSearchKeyword('');
     setNews([]);
+    setShowAnalytics(false); // カテゴリ変更時は分析を非表示
+    setShowEventAnalytics(false); // イベント分析も非表示
     fetchNews(category, true);
   };
 
@@ -113,7 +117,7 @@ export default function App() {
   // 追加読み込み
   const handleLoadMore = () => {
     if (loadingMore || !hasMore) return;
-    
+
     setLoadingMore(true);
     if (isSearching && searchKeyword) {
       handleSearch(searchKeyword, false);
@@ -125,18 +129,18 @@ export default function App() {
   // 検索
   const handleSearch = async (keyword: string, reset: boolean = true) => {
     if (!keyword.trim()) return;
-    
+
     if (reset) {
       setLoading(true);
       setNews([]);
     }
     setIsSearching(true);
     setSearchKeyword(keyword);
-    
+
     try {
       const offset = reset ? 0 : news.length;
       const result = await searchNews(keyword, PAGE_SIZE, offset);
-      
+
       if (reset) {
         setNews(result.data);
       } else {
@@ -176,6 +180,48 @@ export default function App() {
   // ヘッダーコンポーネント
   const ListHeader = () => (
     <View style={styles.listHeader}>
+      {/* YouTube分析ボタン（YouTubeカテゴリのみ表示） */}
+      {selectedCategory === 'youtube' && !isSearching && (
+        <View style={styles.analyticsSection}>
+          <TouchableOpacity
+            style={styles.analyticsButton}
+            onPress={() => setShowAnalytics(!showAnalytics)}
+          >
+            <Text style={styles.analyticsButtonText}>
+              {showAnalytics ? '📊 分析を閉じる' : '📊 チャンネル分析を見る'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* 分析セクション */}
+          {showAnalytics && (
+            <View style={styles.analyticsContainer}>
+              <YouTubeAnalytics onClose={() => setShowAnalytics(false)} />
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* イベント分析ボタン（イベントカテゴリのみ表示） */}
+      {selectedCategory === 'event' && !isSearching && (
+        <View style={styles.analyticsSection}>
+          <TouchableOpacity
+            style={styles.analyticsButton}
+            onPress={() => setShowEventAnalytics(!showEventAnalytics)}
+          >
+            <Text style={styles.analyticsButtonText}>
+              {showEventAnalytics ? '🎪 分析を閉じる' : '🎪 県別イベントを見る'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* イベント分析セクション */}
+          {showEventAnalytics && (
+            <View style={styles.analyticsContainer}>
+              <EventAnalytics onClose={() => setShowEventAnalytics(false)} />
+            </View>
+          )}
+        </View>
+      )}
+
       <View style={styles.statsBar}>
         <Text style={styles.statsText}>
           {isSearching ? `「${searchKeyword}」の検索結果` : '最新ニュース'}
@@ -196,7 +242,7 @@ export default function App() {
         </View>
       );
     }
-    
+
     if (loadingMore) {
       return (
         <View style={styles.loadingMore}>
@@ -205,7 +251,7 @@ export default function App() {
         </View>
       );
     }
-    
+
     return (
       <View style={styles.footer}>
         <TouchableOpacity style={styles.loadMoreButton} onPress={handleLoadMore}>
@@ -247,7 +293,7 @@ export default function App() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#1a1a2e" />
-      
+
       {/* ヘッダー */}
       <View style={styles.header}>
         <View style={[styles.headerInner, isWeb && styles.webHeaderInner]}>
@@ -419,6 +465,26 @@ const styles = StyleSheet.create({
   statsCount: {
     fontSize: 12,
     color: '#888',
+  },
+  analyticsSection: {
+    padding: 16,
+    backgroundColor: '#fff',
+  },
+  analyticsButton: {
+    backgroundColor: '#e74c3c',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  analyticsButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  analyticsContainer: {
+    marginTop: 8,
   },
   loadingMore: {
     flexDirection: 'row',

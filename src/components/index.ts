@@ -3,3 +3,5 @@ export { CategoryTabs } from './CategoryTabs';
 export { SearchBar } from './SearchBar';
 export { TopicsSection } from './TopicsSection';
 export { AnimatedLogo } from './AnimatedLogo';
+export { YouTubeAnalytics } from './YouTubeAnalytics';
+export { EventAnalytics } from './EventAnalytics';
